@@ -6,6 +6,7 @@ import {
   Hash,
   Key,
   Calendar,
+  CalendarRange,
   Sliders,
   Sun,
   Moon,
@@ -46,6 +47,7 @@ import { UrlTool } from "@/tools/url/url-tool";
 import { HashTool } from "@/tools/hash/hash-tool";
 import { UuidTool } from "@/tools/uuid/uuid-tool";
 import { EpochTool } from "@/tools/epoch/epoch-tool";
+import { JulianTool } from "@/tools/julian/julian-tool";
 import { PasswordTool } from "@/tools/password/password-tool";
 import { TextPipelineTool } from "@/tools/text-pipeline/text-pipeline-tool";
 import { TimezoneTool } from "@/tools/timezone/timezone-tool";
@@ -89,12 +91,12 @@ const TOOLS: ToolItem[] = [
   },
   {
     id: "jwt-decoder",
-    name: "JWT Decoder",
-    description: "Decode and inspect JSON Web Tokens instantly",
+    name: "JWT Encoder/Decoder",
+    description: "Decode, edit claims, and re-encode JSON Web Tokens",
     category: "formatters",
     icon: FileCode,
     component: JwtTool,
-    keywords: ["jwt", "token", "decoder", "header", "payload", "claims", "sign"],
+    keywords: ["jwt", "token", "decoder", "encoder", "header", "payload", "claims", "sign", "hmac"],
   },
   {
     id: "url-encoder",
@@ -131,6 +133,15 @@ const TOOLS: ToolItem[] = [
     icon: Calendar,
     component: EpochTool,
     keywords: ["epoch", "unix", "timestamp", "time", "date", "utc", "local"],
+  },
+  {
+    id: "julian-converter",
+    name: "Julian Date Converter",
+    description: "Convert ordinal dates (yyyyDDD) to Gregorian (yyyy-mm-dd) and back",
+    category: "converters",
+    icon: CalendarRange,
+    component: JulianTool,
+    keywords: ["julian", "ordinal", "yyyyddd", "day of year", "date", "gregorian", "convert"],
   },
   {
     id: "password-generator",
