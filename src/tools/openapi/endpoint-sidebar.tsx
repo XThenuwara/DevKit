@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
-import { ChevronDown, ChevronRight, GripVertical, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronRight, Copy, GripVertical, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { getTagOrder, removeOperation, reorderOperation, getOperationOrder } from "./openapi-model";
+import { duplicateOperation, getTagOrder, removeOperation, reorderOperation, getOperationOrder } from "./openapi-model";
 import type { HttpMethod, OpenAPIDoc, OperationRef } from "./openapi-types";
 
 const METHOD_COLOR: Record<string, string> = {
@@ -145,8 +145,23 @@ export const EndpointSidebar: React.FC<EndpointSidebarProps> = ({
                         <Button
                           variant="ghost"
                           size="icon-xs"
+                          className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground"
+                          type="button"
+                          title="Duplicate"
+                          onClick={() => {
+                            const duplicated = duplicateOperation(spec, op.path, op.method);
+                            onSpecChange(duplicated.spec);
+                            onSelect({ path: duplicated.path, method: duplicated.method });
+                          }}
+                        >
+                          <Copy className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon-xs"
                           className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive"
                           type="button"
+                          title="Delete"
                           onClick={() => {
                             const next = removeOperation(spec, op.path, op.method);
                             onSpecChange(next);

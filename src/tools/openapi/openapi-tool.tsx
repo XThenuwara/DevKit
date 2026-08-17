@@ -24,11 +24,13 @@ import { ExportDialog } from "./export-dialog";
 import { OperationYamlPanel } from "./operation-yaml-panel";
 import { ParametersPanel } from "./parameters-panel";
 import { SchemaVisualEditor } from "./schema-visual-editor";
+import { SuggestMenu } from "./suggest-menu";
 import {
   SAMPLE_OPENAPI,
   addOperation,
   cloneSpec,
   collectOperationSchemaNames,
+  collectPathCatalog,
   collectSchemaNames,
   componentRef,
   getOperation,
@@ -118,6 +120,7 @@ const RequestEditor: React.FC<{
       <div className={`flex-1 min-h-0 p-3 ${tab === "params" || tab === "body" ? "flex flex-col overflow-hidden" : "overflow-y-auto space-y-3"}`}>
         {tab === "params" && (
           <ParametersPanel
+            spec={spec}
             pathParams={pathItem.parameters ?? []}
             opParams={operation.parameters ?? []}
             onPathChange={(parameters) =>
@@ -559,6 +562,7 @@ export const OpenApiTool: React.FC = () => {
   const [selected, setSelected] = useState<{ path: string; method: HttpMethod } | null>(null);
   const [newPath, setNewPath] = useState("/");
   const [newMethod, setNewMethod] = useState<HttpMethod>("get");
+  const [pathSuggestOpen, setPathSuggestOpen] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
 
@@ -575,6 +579,12 @@ export const OpenApiTool: React.FC = () => {
         op.tags.some((tag) => tag.toLowerCase().includes(q)),
     );
   }, [operations, query]);
+
+  const pathCatalog = useMemo(() => (spec ? collectPathCatalog(spec) : []), [spec]);
+  const pathSuggestions = useMemo(() => {
+    const q = newPath.trim().toLowerCase();
+    return pathCatalog.filter((path) => !q || path.toLowerCase().includes(q)).slice(0, 8);
+  }, [pathCatalog, newPath]);
 
   const applySpec = (next: OpenAPIDoc, nextFormat = format, resetBaseline = false) => {
     setSpec(next);
@@ -744,12 +754,36 @@ export const OpenApiTool: React.FC = () => {
                   ))}
                 </SelectContent>
               </Select>
-              <Input
-                value={newPath}
-                onChange={(e) => setNewPath(e.target.value)}
-                className="h-7 flex-1 font-mono text-[11px] bg-background"
-                placeholder="/path"
-              />
+              <div className="relative min-w-0 flex-1">
+                <Input
+                  value={newPath}
+                  onChange={(e) => {
+                    setNewPath(e.target.value);
+                    setPathSuggestOpen(true);
+                  }}
+                  onFocus={() => setPathSuggestOpen(true)}
+                  onBlur={() => setTimeout(() => setPathSuggestOpen(false), 120)}
+                  className="h-7 w-full font-mono text-[11px] bg-background"
+                  placeholder="/path"
+                />
+                <SuggestMenu
+                  open={pathSuggestOpen && pathSuggestions.length > 0}
+                  items={pathSuggestions.map((path) => ({
+                    id: path,
+                    title: path,
+                    subtitle: spec?.paths?.[path]
+                      ? Object.keys(spec.paths[path] ?? {})
+                          .filter((key) => HTTP_METHODS.includes(key as HttpMethod))
+                          .map((key) => key.toUpperCase())
+                          .join(" · ")
+                      : undefined,
+                  }))}
+                  onSelect={(path) => {
+                    setNewPath(path);
+                    setPathSuggestOpen(false);
+                  }}
+                />
+              </div>
               <Button
                 size="sm"
                 className="h-7 px-2"

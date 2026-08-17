@@ -156,17 +156,21 @@ const BodyEditor: React.FC<BodySchemaPanelProps> = ({
       </div>
 
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 lg:grid-cols-2">
-        <div className="flex min-h-[240px] flex-col gap-1.5 lg:min-h-0">
-          <p className="shrink-0 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Schema tree</p>
-          <SchemaTreeEditor
-            spec={spec}
-            schema={schema ?? { type: "object", properties: {} }}
-            onChange={patchSchema}
-            onSpecChange={onSpecChange}
-          />
+        <div className="flex min-h-[240px] flex-col overflow-hidden rounded-xl border border-border bg-card shadow-sm lg:min-h-0">
+          <div className="shrink-0 border-b border-border bg-muted/50 px-3 py-2">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Schema tree</p>
+          </div>
+          <div className="min-h-0 flex-1 p-2">
+            <SchemaTreeEditor
+              spec={spec}
+              schema={schema ?? { type: "object", properties: {} }}
+              onChange={patchSchema}
+              onSpecChange={onSpecChange}
+            />
+          </div>
         </div>
-        <div className="flex min-h-[240px] flex-col gap-1.5 lg:min-h-0">
-          <div className="flex shrink-0 items-center justify-between gap-2">
+        <div className="flex min-h-[240px] flex-col overflow-hidden rounded-xl border border-border bg-background shadow-sm lg:min-h-0">
+          <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border bg-muted/50 px-3 py-2">
             <Tabs value={jsonView} onValueChange={(value) => setJsonView(value as "example" | "schema")}>
               <TabsList className="h-7">
                 <TabsTrigger value="example" className="h-6 px-2 text-[11px]">
@@ -186,33 +190,35 @@ const BodyEditor: React.FC<BodySchemaPanelProps> = ({
               <CopyButton value={jsonView === "example" ? exampleDraft : schemaDraft} className="h-6 w-6" />
             </div>
           </div>
-          {jsonView === "example" ? (
-            <CodeEditor
-              value={exampleDraft}
-              onChange={(value) => {
-                setExampleDraft(value);
-                setExampleDirty(value !== exampleText);
-              }}
-              language="json"
-              height="100%"
-              className="min-h-0 flex-1"
-            />
-          ) : (
-            <CodeEditor
-              value={schemaDraft}
-              onChange={(value) => {
-                setSchemaDraft(value);
-                try {
-                  patchSchema(JSON.parse(value) as SchemaObject);
-                } catch {
-                  /* keep typing */
-                }
-              }}
-              language="json"
-              height="100%"
-              className="min-h-0 flex-1"
-            />
-          )}
+          <div className="min-h-0 flex-1">
+            {jsonView === "example" ? (
+              <CodeEditor
+                value={exampleDraft}
+                onChange={(value) => {
+                  setExampleDraft(value);
+                  setExampleDirty(value !== exampleText);
+                }}
+                language="json"
+                height="100%"
+                className="h-full rounded-none border-0"
+              />
+            ) : (
+              <CodeEditor
+                value={schemaDraft}
+                onChange={(value) => {
+                  setSchemaDraft(value);
+                  try {
+                    patchSchema(JSON.parse(value) as SchemaObject);
+                  } catch {
+                    /* keep typing */
+                  }
+                }}
+                language="json"
+                height="100%"
+                className="h-full rounded-none border-0"
+              />
+            )}
+          </div>
         </div>
       </div>
     </div>

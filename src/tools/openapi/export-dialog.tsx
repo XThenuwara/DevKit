@@ -55,7 +55,7 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         showCloseButton={false}
-        className="fixed inset-3 top-3 left-3 flex h-[calc(100vh-1.5rem)] w-[calc(100vw-1.5rem)] max-w-none sm:max-w-none translate-x-0 translate-y-0 flex-col gap-0 overflow-hidden rounded-xl p-0"
+        className="fixed inset-3 top-3 left-3 flex h-[calc(100vh-1.5rem)] w-[calc(100vw-1.5rem)] max-w-none sm:max-w-none translate-x-0 translate-y-0 flex-col gap-0 overflow-hidden rounded-2xl border border-border bg-background p-0 shadow-2xl ring-1 ring-foreground/10"
       >
         <DialogHeader className="shrink-0 border-b border-border px-4 py-3">
           <div className="flex items-start justify-between gap-3">
@@ -94,7 +94,7 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
           <CopyButton value={exported} className="h-7 w-7" />
         </div>
 
-        <div className="flex-1 min-h-0 p-4">
+        <div className="flex-1 min-h-0 bg-muted/40 p-4">
           {view === "diff" ? (
             <div className="flex h-full min-h-0 flex-col gap-2">
               <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-muted-foreground">

@@ -463,6 +463,93 @@ export const addOperation = (spec: OpenAPIDoc, path: string, method: HttpMethod)
   return next;
 };
 
+export const duplicateOperation = (
+  spec: OpenAPIDoc,
+  path: string,
+  method: HttpMethod,
+): { spec: OpenAPIDoc; path: string; method: HttpMethod } => {
+  const source = getOperation(spec, path, method);
+  const pathItem = spec.paths?.[path];
+  if (!source || !pathItem) return { spec, path, method };
+
+  let nextPath = `${path.replace(/\/$/, "")}-copy`;
+  let n = 2;
+  while (getOperation(spec, nextPath, method) || spec.paths?.[nextPath]?.[method]) {
+    nextPath = `${path.replace(/\/$/, "")}-copy-${n++}`;
+  }
+
+  let next = cloneSpec(spec);
+  next.paths ??= {};
+  const copied: OperationObject = cloneSpec(source);
+  if (copied.operationId) copied.operationId = `${copied.operationId}Copy`;
+  if (copied.summary) copied.summary = `${copied.summary} (copy)`;
+  const dest = next.paths[nextPath] ?? {};
+  dest[method] = copied;
+  if (pathItem.parameters?.length && !dest.parameters?.length) {
+    dest.parameters = cloneSpec(pathItem.parameters);
+  }
+  next.paths[nextPath] = dest;
+
+  const order = getOperationOrder(next);
+  const newId = `${method}:${nextPath}`;
+  const fromId = `${method}:${path}`;
+  const insertAt = order.indexOf(fromId);
+  const without = order.filter((id) => id !== newId);
+  if (insertAt >= 0) without.splice(insertAt + 1, 0, newId);
+  else without.push(newId);
+  next = setOperationOrder(next, without);
+  return { spec: next, path: nextPath, method };
+};
+
+export type ParameterSuggestion = {
+  key: string;
+  name: string;
+  in: ParameterObject["in"];
+  description?: string;
+  required?: boolean;
+  schema?: SchemaObject;
+  usedIn: string[];
+};
+
+export const collectParameterCatalog = (spec: OpenAPIDoc): ParameterSuggestion[] => {
+  const map = new Map<string, ParameterSuggestion>();
+  const add = (param: ParameterObject, loc: string) => {
+    const resolved = resolveRef<ParameterObject>(spec, param) ?? param;
+    if (!resolved?.name || !resolved.in) return;
+    const key = `${resolved.in}:${resolved.name}`;
+    const existing = map.get(key);
+    if (existing) {
+      if (!existing.usedIn.includes(loc)) existing.usedIn.push(loc);
+      return;
+    }
+    map.set(key, {
+      key,
+      name: resolved.name,
+      in: resolved.in,
+      description: resolved.description,
+      required: resolved.required,
+      schema: resolved.schema ? cloneSpec(resolved.schema) : { type: "string" },
+      usedIn: [loc],
+    });
+  };
+
+  for (const [path, item] of Object.entries(spec.paths ?? {})) {
+    if (!item || typeof item !== "object") continue;
+    for (const param of item.parameters ?? []) add(param, path);
+    for (const method of HTTP_METHODS) {
+      const operation = item[method] as OperationObject | undefined;
+      if (!operation) continue;
+      const loc = `${method.toUpperCase()} ${path}`;
+      for (const param of operation.parameters ?? []) add(param, loc);
+    }
+  }
+
+  return [...map.values()].sort((a, b) => a.name.localeCompare(b.name) || a.in.localeCompare(b.in));
+};
+
+export const collectPathCatalog = (spec: OpenAPIDoc): string[] =>
+  Object.keys(spec.paths ?? {}).sort((a, b) => a.localeCompare(b));
+
 export const removeOperation = (spec: OpenAPIDoc, path: string, method: HttpMethod): OpenAPIDoc => {
   const next = cloneSpec(spec);
   const item = next.paths?.[path];

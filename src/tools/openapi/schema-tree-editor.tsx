@@ -266,7 +266,7 @@ export const SchemaTreeEditor: React.FC<SchemaTreeEditorProps> = ({
   onSpecChange,
   name = "body",
 }) => (
-  <div className="h-full min-h-0 flex-1 overflow-auto rounded-md border border-border bg-muted/20 p-2">
+  <div className="h-full min-h-0 overflow-auto p-1">
     <div className="mb-1 grid grid-cols-[18px_1fr_92px_28px_28px] gap-1 px-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
       <span />
       <span>Field</span>
