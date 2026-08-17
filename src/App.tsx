@@ -20,6 +20,7 @@ import {
   Globe,
   ImagePlus,
   ScanText,
+  Route,
 } from "lucide-react";
 
 const GithubIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -53,6 +54,7 @@ import { TextPipelineTool } from "@/tools/text-pipeline/text-pipeline-tool";
 import { TimezoneTool } from "@/tools/timezone/timezone-tool";
 import { ImageExtractorTool } from "@/tools/image-extractor/image-extractor-tool";
 import { NonAsciiTool } from "@/tools/non-ascii/non-ascii-tool";
+import { OpenApiTool } from "@/tools/openapi/openapi-tool";
 
 // Radix/Shadcn dialog for Command Palette
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -79,6 +81,15 @@ const TOOLS: ToolItem[] = [
     icon: Braces,
     component: JsonTool,
     keywords: ["json", "pretty", "minify", "format", "validate", "lint"],
+  },
+  {
+    id: "openapi-editor",
+    name: "OpenAPI 3 Editor",
+    description: "Browse endpoints and visually edit OpenAPI 3 request and response schemas",
+    category: "formatters",
+    icon: Route,
+    component: OpenApiTool,
+    keywords: ["openapi", "swagger", "api", "spec", "yaml", "json", "schema", "endpoint", "rest"],
   },
   {
     id: "base64",
