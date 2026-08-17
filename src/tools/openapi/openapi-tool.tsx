@@ -71,17 +71,18 @@ const FieldLabel: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{children}</span>
 );
 
-const Section: React.FC<{ title: string; action?: React.ReactNode; children: React.ReactNode }> = ({
+const Section: React.FC<{ title: string; action?: React.ReactNode; children: React.ReactNode; fill?: boolean }> = ({
   title,
   action,
   children,
+  fill,
 }) => (
-  <section className="rounded-lg border border-border bg-background">
-    <header className="flex items-center justify-between gap-2 border-b border-border bg-muted/50 px-3 py-2">
+  <section className={`rounded-lg border border-border bg-background ${fill ? "flex h-full min-h-0 flex-col" : ""}`}>
+    <header className="flex shrink-0 items-center justify-between gap-2 border-b border-border bg-muted/50 px-3 py-2">
       <h3 className="text-[11px] font-bold uppercase tracking-wider text-foreground">{title}</h3>
       {action}
     </header>
-    <div className="p-3 space-y-3">{children}</div>
+    <div className={fill ? "min-h-0 flex-1 overflow-hidden p-3" : "p-3 space-y-3"}>{children}</div>
   </section>
 );
 
@@ -114,7 +115,7 @@ const RequestEditor: React.FC<{
           </TabsList>
         </Tabs>
       </div>
-      <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-3">
+      <div className={`flex-1 min-h-0 p-3 ${tab === "params" || tab === "body" ? "flex flex-col overflow-hidden" : "overflow-y-auto space-y-3"}`}>
         {tab === "params" && (
           <ParametersPanel
             pathParams={pathItem.parameters ?? []}
@@ -128,6 +129,7 @@ const RequestEditor: React.FC<{
 
         {tab === "body" && (
           <Section
+            fill
             title="Request body"
             action={
               <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
@@ -313,7 +315,7 @@ const ResponseEditor: React.FC<{
           ))
         )}
       </div>
-      <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-3">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden p-3 gap-3">
         {currentCode && response ? (
           <>
             <Section
@@ -361,7 +363,7 @@ const ResponseEditor: React.FC<{
                 </label>
               </div>
             </Section>
-            <Section title="Body schema">
+            <Section title="Body schema" fill>
               <BodySchemaPanel
                 spec={spec}
                 title={`Response ${currentCode} body`}

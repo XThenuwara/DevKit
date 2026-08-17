@@ -73,8 +73,8 @@ export const ParametersTable: React.FC<ParametersTableProps> = ({
   }
 
   return (
-    <div className={`overflow-x-auto rounded-md border border-border ${compact ? "max-h-[280px] overflow-y-auto" : ""}`}>
-      <div className="grid min-w-[680px] grid-cols-[1fr_72px_88px_88px_44px_1fr_72px_32px] gap-0 bg-muted/70 px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground sticky top-0 z-10">
+    <div className={`flex min-h-0 flex-col overflow-hidden rounded-md border border-border ${compact ? "h-full" : "h-full"}`}>
+      <div className="grid min-w-[680px] shrink-0 grid-cols-[1fr_72px_88px_88px_44px_1fr_72px_32px] gap-0 bg-muted/70 px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
         <span>Name</span>
         <span>In</span>
         <span>Type</span>
@@ -84,6 +84,7 @@ export const ParametersTable: React.FC<ParametersTableProps> = ({
         <span>Example</span>
         <span />
       </div>
+      <div className="min-h-0 flex-1 overflow-auto">
       {rows.map((row) => {
         const { param } = row;
         const schema = param.schema ?? { type: "string" };
@@ -216,6 +217,7 @@ export const ParametersTable: React.FC<ParametersTableProps> = ({
           </div>
         );
       })}
+      </div>
     </div>
   );
 };
@@ -240,8 +242,8 @@ export const ParametersPanel: React.FC<{
   };
 
   return (
-    <section className="rounded-lg border border-border bg-background">
-      <header className="flex items-center justify-between gap-2 border-b border-border bg-muted/50 px-3 py-2">
+    <section className="flex h-full min-h-0 flex-col rounded-lg border border-border bg-background">
+      <header className="flex shrink-0 items-center justify-between gap-2 border-b border-border bg-muted/50 px-3 py-2">
         <h3 className="text-[11px] font-bold uppercase tracking-wider text-foreground">Parameters</h3>
         <div className="flex items-center gap-1">
           <Button variant="ghost" size="sm" className="h-6 px-2 text-[11px]" onClick={() => add("query")} type="button">
@@ -261,7 +263,7 @@ export const ParametersPanel: React.FC<{
           </FullscreenModal>
         </div>
       </header>
-      <div className="p-3">
+      <div className="min-h-0 flex-1 p-3">
         <ParametersTable {...props} compact />
       </div>
     </section>

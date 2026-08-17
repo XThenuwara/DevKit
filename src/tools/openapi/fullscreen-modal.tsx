@@ -46,7 +46,10 @@ export const FullscreenModal: React.FC<FullscreenModalProps> = ({
       </Button>
     ) : null}
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex h-[92vh] max-h-[92vh] w-[96vw] max-w-[96vw] flex-col gap-0 overflow-hidden p-0">
+      <DialogContent
+        showCloseButton={false}
+        className="fixed inset-3 top-3 left-3 flex h-[calc(100vh-1.5rem)] w-[calc(100vw-1.5rem)] max-w-none sm:max-w-none translate-x-0 translate-y-0 flex-col gap-0 overflow-hidden rounded-xl p-0"
+      >
         <DialogHeader className="shrink-0 flex-row items-center justify-between border-b border-border px-4 py-3 space-y-0">
           <DialogTitle className="text-sm font-semibold">{title}</DialogTitle>
           <div className="flex items-center gap-2">
@@ -56,7 +59,7 @@ export const FullscreenModal: React.FC<FullscreenModalProps> = ({
             </Button>
           </div>
         </DialogHeader>
-        <div className="flex-1 min-h-0 overflow-hidden p-4">{children}</div>
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden p-4">{children}</div>
       </DialogContent>
     </Dialog>
   </>

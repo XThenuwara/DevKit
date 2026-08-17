@@ -17,7 +17,7 @@ const METHOD_COLOR: Record<string, string> = {
 
 const MethodLabel: React.FC<{ method: string }> = ({ method }) => (
   <span
-    className={`inline-flex min-w-[3.1rem] justify-center text-[11px] font-extrabold uppercase tracking-wide ${METHOD_COLOR[method] || METHOD_COLOR.options}`}
+    className={`inline-flex w-[3.6rem] shrink-0 justify-end text-[11px] font-extrabold uppercase tracking-wide tabular-nums ${METHOD_COLOR[method] || METHOD_COLOR.options}`}
   >
     {method}
   </span>
@@ -125,15 +125,15 @@ export const EndpointSidebar: React.FC<EndpointSidebarProps> = ({
                           const position = e.clientY < rect.top + rect.height / 2 ? "before" : "after";
                           handleDrop(op.id, position);
                         }}
-                        className={`group flex items-center gap-1 px-2 py-1 ${
+                        className={`group flex items-center gap-1 px-1.5 py-1 ${
                           active ? "bg-muted" : "hover:bg-muted/40"
                         } ${dragId === op.id ? "opacity-50" : ""}`}
                       >
-                        <GripVertical className="h-3.5 w-3.5 shrink-0 cursor-grab text-muted-foreground/50 active:cursor-grabbing" />
+                        <GripVertical className="h-3.5 w-3.5 shrink-0 cursor-grab text-muted-foreground/70 opacity-0 transition-opacity group-hover:opacity-100 active:cursor-grabbing" />
                         <button
                           type="button"
                           onClick={() => onSelect({ path: op.path, method: op.method })}
-                          className="flex min-w-0 flex-1 items-center gap-2 px-1 py-0.5 text-left"
+                          className="flex min-w-0 flex-1 items-center gap-2 py-0.5 text-left"
                         >
                           <MethodLabel method={op.method} />
                           <span

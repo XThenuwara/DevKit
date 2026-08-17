@@ -55,7 +55,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   const dark = useIsDark();
 
   return (
-    <div className={`overflow-hidden rounded-md border border-border ${className}`}>
+    <div className={`h-full min-h-0 overflow-hidden rounded-md border border-border ${className}`}>
       <Editor
         height={height}
         language={language}
@@ -95,7 +95,7 @@ export const CodeDiffEditor: React.FC<CodeDiffEditorProps> = ({
   const dark = useIsDark();
 
   return (
-    <div className={`overflow-hidden rounded-md border border-border ${className}`}>
+    <div className={`h-full min-h-0 overflow-hidden rounded-md border border-border ${className}`}>
       <DiffEditor
         height={height}
         language={language}

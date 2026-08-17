@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { Download } from "lucide-react";
+import { Download, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/shared/copy-button";
 import {
@@ -53,12 +53,22 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex h-[90vh] max-h-[90vh] w-[94vw] max-w-[94vw] flex-col gap-0 overflow-hidden p-0">
+      <DialogContent
+        showCloseButton={false}
+        className="fixed inset-3 top-3 left-3 flex h-[calc(100vh-1.5rem)] w-[calc(100vw-1.5rem)] max-w-none sm:max-w-none translate-x-0 translate-y-0 flex-col gap-0 overflow-hidden rounded-xl p-0"
+      >
         <DialogHeader className="shrink-0 border-b border-border px-4 py-3">
-          <DialogTitle className="text-sm font-semibold">Export OpenAPI</DialogTitle>
-          <DialogDescription className="text-xs">
-            Compare your original import against the current export, then download.
-          </DialogDescription>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <DialogTitle className="text-sm font-semibold">Export OpenAPI</DialogTitle>
+              <DialogDescription className="text-xs">
+                Compare your original import against the current export, then download.
+              </DialogDescription>
+            </div>
+            <Button variant="ghost" size="icon-xs" type="button" onClick={() => onOpenChange(false)}>
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
         </DialogHeader>
 
         <div className="shrink-0 flex items-center gap-2 border-b border-border px-4 py-2">
