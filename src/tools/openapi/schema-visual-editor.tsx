@@ -127,7 +127,7 @@ export const SchemaVisualEditor: React.FC<SchemaVisualEditorProps> = ({
   };
 
   return (
-    <div className={`rounded-xl border border-border/60 bg-card/40 ${depth === 0 ? "p-3" : "p-2.5"} space-y-2.5`}>
+    <div className={`rounded-md border border-border bg-muted/40 ${depth === 0 ? "p-3" : "p-2"} space-y-2.5`}>
       {refInfo ? (
         <div className="flex flex-wrap items-center gap-2 rounded-lg border border-sky-500/20 bg-sky-500/8 px-2.5 py-1.5">
           <Link2 className="h-3.5 w-3.5 text-sky-600 dark:text-sky-400" />
@@ -272,7 +272,7 @@ export const SchemaVisualEditor: React.FC<SchemaVisualEditorProps> = ({
               {Object.entries(properties).map(([name, child]) => {
                 const open = expanded[name] ?? depth < 1;
                 return (
-                  <div key={name} className="rounded-lg border border-border/50 bg-background/60 overflow-hidden">
+                  <div key={name} className="overflow-hidden rounded-md border border-border bg-card">
                     <div className="flex items-center gap-2 px-2 py-1.5">
                       <button
                         type="button"
