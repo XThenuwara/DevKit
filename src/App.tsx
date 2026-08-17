@@ -473,7 +473,7 @@ export default function App() {
 
               {/* Github link */}
               <a
-                href="https://github.com"
+                href="https://github.com/XThenuwara/DevKit"
                 target="_blank"
                 rel="noreferrer"
                 className="p-2 hover:bg-stone-100/40 dark:hover:bg-stone-900/35 rounded-lg text-muted-foreground hover:text-foreground transition-all"
