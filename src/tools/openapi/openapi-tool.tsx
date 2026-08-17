@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Download,
-  FileCode2,
   FileJson,
   FileUp,
   FolderOpen,
@@ -19,6 +18,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { BodySchemaPanel } from "./body-schema-panel";
+import { CodeEditor } from "./code-editor";
+import { EndpointSidebar } from "./endpoint-sidebar";
+import { ExportDialog } from "./export-dialog";
+import { OperationYamlPanel } from "./operation-yaml-panel";
+import { ParametersPanel } from "./parameters-panel";
 import { SchemaVisualEditor } from "./schema-visual-editor";
 import {
   SAMPLE_OPENAPI,
@@ -27,14 +31,9 @@ import {
   collectOperationSchemaNames,
   collectSchemaNames,
   componentRef,
-  emptySchemaForType,
   getOperation,
   HTTP_METHODS,
-  mergeOperationView,
   parseSpec,
-  removeOperation,
-  schemaType,
-  serializeOperationView,
   serializeSpec,
   listOperations,
   updateOperation,
@@ -44,23 +43,10 @@ import type {
   HttpMethod,
   OpenAPIDoc,
   OperationObject,
-  OperationRef,
-  ParameterObject,
   RequestBodyObject,
   ResponseObject,
   SpecFormat,
 } from "./openapi-types";
-
-const METHOD_COLOR: Record<string, string> = {
-  get: "text-[#f59e0b]",
-  post: "text-[#22c55e]",
-  put: "text-[#3b82f6]",
-  patch: "text-[#a855f7]",
-  delete: "text-[#ef4444]",
-  options: "text-muted-foreground",
-  head: "text-muted-foreground",
-  trace: "text-muted-foreground",
-};
 
 const METHOD_CHIP: Record<string, string> = {
   get: "bg-amber-500/15 text-amber-700 dark:text-amber-400",
@@ -81,12 +67,6 @@ const STATUS_TONE = (code: string) => {
   return "text-muted-foreground";
 };
 
-const MethodLabel: React.FC<{ method: string; className?: string }> = ({ method, className = "" }) => (
-  <span className={`inline-flex min-w-[3.1rem] justify-center text-[11px] font-extrabold uppercase tracking-wide ${METHOD_COLOR[method] || METHOD_COLOR.options} ${className}`}>
-    {method}
-  </span>
-);
-
 const FieldLabel: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{children}</span>
 );
@@ -104,301 +84,6 @@ const Section: React.FC<{ title: string; action?: React.ReactNode; children: Rea
     <div className="p-3 space-y-3">{children}</div>
   </section>
 );
-
-const PARAM_TYPES = ["string", "integer", "number", "boolean", "array"] as const;
-const PARAM_FORMATS: Record<string, string[]> = {
-  string: ["", "date", "date-time", "uuid", "uri"],
-  integer: ["", "int32", "int64"],
-  number: ["", "float", "double"],
-};
-
-type ParamRow = {
-  source: "path" | "operation";
-  index: number;
-  param: ParameterObject;
-};
-
-const ParametersPanel: React.FC<{
-  pathParams: ParameterObject[];
-  opParams: ParameterObject[];
-  onPathChange: (parameters: ParameterObject[]) => void;
-  onOpChange: (parameters: ParameterObject[]) => void;
-}> = ({ pathParams, opParams, onPathChange, onOpChange }) => {
-  const rows: ParamRow[] = [
-    ...pathParams.map((param, index) => ({ source: "path" as const, index, param })),
-    ...opParams.map((param, index) => ({ source: "operation" as const, index, param })),
-  ];
-
-  const patch = (row: ParamRow, next: ParameterObject) => {
-    if (row.source === "path") {
-      onPathChange(pathParams.map((item, i) => (i === row.index ? next : item)));
-    } else {
-      onOpChange(opParams.map((item, i) => (i === row.index ? next : item)));
-    }
-  };
-
-  const remove = (row: ParamRow) => {
-    if (row.source === "path") {
-      onPathChange(pathParams.filter((_, i) => i !== row.index));
-    } else {
-      onOpChange(opParams.filter((_, i) => i !== row.index));
-    }
-  };
-
-  const add = (location: ParameterObject["in"]) => {
-    const param: ParameterObject = {
-      name: location === "path" ? "id" : "param",
-      in: location,
-      required: location === "path",
-      schema: { type: "string" },
-    };
-    if (location === "path") onPathChange([...pathParams, param]);
-    else onOpChange([...opParams, param]);
-  };
-
-  return (
-    <Section
-      title="Parameters"
-      action={
-        <div className="flex items-center gap-1">
-          <Button variant="ghost" size="sm" className="h-6 px-2 text-[11px]" onClick={() => add("query")} type="button">
-            <Plus className="h-3 w-3 mr-1" />
-            Query
-          </Button>
-          <Button variant="ghost" size="sm" className="h-6 px-2 text-[11px]" onClick={() => add("header")} type="button">
-            Header
-          </Button>
-        </div>
-      }
-    >
-      {rows.length === 0 ? (
-        <p className="text-xs text-muted-foreground">No parameters. Path params are inferred from the URL template.</p>
-      ) : (
-        <div className="overflow-x-auto rounded-md border border-border">
-          <div className="grid min-w-[640px] grid-cols-[1fr_72px_88px_88px_44px_1fr_72px_32px] gap-0 bg-muted/70 px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-            <span>Name</span>
-            <span>In</span>
-            <span>Type</span>
-            <span>Format</span>
-            <span>Req</span>
-            <span>Description</span>
-            <span>Example</span>
-            <span />
-          </div>
-          {rows.map((row) => {
-            const { param } = row;
-            const schema = param.schema ?? { type: "string" };
-            const type = schemaType(schema);
-            const formats = PARAM_FORMATS[type] ?? [""];
-            return (
-              <div
-                key={`${row.source}-${row.index}-${param.name}`}
-                className="grid min-w-[640px] grid-cols-[1fr_72px_88px_88px_44px_1fr_72px_32px] items-center gap-1 border-t border-border bg-card px-2 py-1.5"
-              >
-                <Input
-                  value={param.name}
-                  onChange={(e) => patch(row, { ...param, name: e.target.value })}
-                  className="h-7 text-xs font-mono"
-                  placeholder="name"
-                />
-                <Select
-                  value={param.in}
-                  onValueChange={(value) => {
-                    const nextIn = value as ParameterObject["in"];
-                    if (nextIn === "path" && row.source === "operation") {
-                      const moved = { ...param, in: nextIn, required: true };
-                      onOpChange(opParams.filter((_, i) => i !== row.index));
-                      onPathChange([...pathParams, moved]);
-                      return;
-                    }
-                    if (nextIn !== "path" && row.source === "path") {
-                      const moved = { ...param, in: nextIn, required: false };
-                      onPathChange(pathParams.filter((_, i) => i !== row.index));
-                      onOpChange([...opParams, moved]);
-                      return;
-                    }
-                    patch(row, {
-                      ...param,
-                      in: nextIn,
-                      required: nextIn === "path" ? true : param.required,
-                    });
-                  }}
-                >
-                  <SelectTrigger className="h-7 text-[11px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(["path", "query", "header", "cookie"] as const).map((item) => (
-                      <SelectItem key={item} value={item}>
-                        {item}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select
-                  value={type}
-                  onValueChange={(value) =>
-                    patch(row, {
-                      ...param,
-                      schema: emptySchemaForType(value),
-                    })
-                  }
-                >
-                  <SelectTrigger className="h-7 text-[11px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {PARAM_TYPES.map((item) => (
-                      <SelectItem key={item} value={item}>
-                        {item}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select
-                  value={schema.format ?? ""}
-                  onValueChange={(value) =>
-                    patch(row, {
-                      ...param,
-                      schema: { ...schema, format: value || undefined },
-                    })
-                  }
-                  disabled={!PARAM_FORMATS[type]}
-                >
-                  <SelectTrigger className="h-7 text-[11px]">
-                    <SelectValue placeholder="—" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {formats.map((fmt) => (
-                      <SelectItem key={fmt || "none"} value={fmt}>
-                        {fmt || "—"}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <label className="flex items-center justify-center">
-                  <Checkbox
-                    checked={Boolean(param.required) || param.in === "path"}
-                    onCheckedChange={(value) => patch(row, { ...param, required: value === true })}
-                    disabled={param.in === "path"}
-                  />
-                </label>
-                <Input
-                  value={param.description ?? ""}
-                  onChange={(e) => patch(row, { ...param, description: e.target.value })}
-                  className="h-7 text-xs"
-                  placeholder="Description"
-                />
-                <Input
-                  value={schema.example !== undefined ? String(schema.example) : ""}
-                  onChange={(e) => {
-                    const raw = e.target.value;
-                    let example: unknown = raw;
-                    if (type === "integer") example = raw ? Number.parseInt(raw, 10) : undefined;
-                    else if (type === "number") example = raw ? Number.parseFloat(raw) : undefined;
-                    else if (type === "boolean") example = raw === "true";
-                    patch(row, {
-                      ...param,
-                      schema: { ...schema, example: raw ? example : undefined },
-                    });
-                  }}
-                  className="h-7 text-xs font-mono"
-                  placeholder="ex"
-                />
-                <Button
-                  variant="ghost"
-                  size="icon-xs"
-                  className="text-muted-foreground hover:text-destructive"
-                  onClick={() => remove(row)}
-                  type="button"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </Section>
-  );
-};
-
-const OperationYamlPanel: React.FC<{
-  spec: OpenAPIDoc;
-  path: string;
-  method: HttpMethod;
-  format: SpecFormat;
-  onSpecChange: (spec: OpenAPIDoc) => void;
-  onError: (message: string | null) => void;
-}> = ({ spec, path, method, format, onSpecChange, onError }) => {
-  const generated = useMemo(
-    () => serializeOperationView(spec, path, method, format),
-    [spec, path, method, format],
-  );
-  const [draft, setDraft] = useState(generated);
-  const [dirty, setDirty] = useState(false);
-
-  useEffect(() => {
-    if (!dirty) setDraft(generated);
-  }, [generated, dirty]);
-
-  return (
-    <Section
-      title="Operation YAML"
-      action={
-        <div className="flex items-center gap-1">
-          <CopyButton value={draft} className="h-7 w-7" />
-          {dirty ? (
-            <>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-6 px-2 text-[11px]"
-                type="button"
-                onClick={() => {
-                  setDraft(generated);
-                  setDirty(false);
-                }}
-              >
-                Reset
-              </Button>
-              <Button
-                size="sm"
-                className="h-6 px-2 text-[11px]"
-                type="button"
-                onClick={() => {
-                  try {
-                    const next = mergeOperationView(spec, path, method, draft, format);
-                    onSpecChange(next);
-                    setDirty(false);
-                    onError(null);
-                  } catch (err) {
-                    onError(err instanceof Error ? err.message : "Could not apply snippet.");
-                  }
-                }}
-              >
-                Apply
-              </Button>
-            </>
-          ) : null}
-        </div>
-      }
-    >
-      <p className="text-[11px] text-muted-foreground">
-        Resolved view of this endpoint with linked schemas stitched in. Edits apply back to the full spec.
-      </p>
-      <Textarea
-        value={draft}
-        onChange={(e) => {
-          setDraft(e.target.value);
-          setDirty(e.target.value !== generated);
-        }}
-        className="min-h-[360px] font-mono text-xs leading-relaxed bg-background"
-        spellCheck={false}
-      />
-    </Section>
-  );
-};
 
 const RequestEditor: React.FC<{
   spec: OpenAPIDoc;
@@ -424,10 +109,7 @@ const RequestEditor: React.FC<{
           <TabsList className="h-7">
             <TabsTrigger value="params" className="h-6 px-2.5 text-[11px]">Params</TabsTrigger>
             <TabsTrigger value="body" className="h-6 px-2.5 text-[11px]">Body</TabsTrigger>
-            <TabsTrigger value="yaml" className="h-6 px-2.5 text-[11px]">
-              <FileCode2 className="h-3 w-3 mr-1 inline" />
-              YAML
-            </TabsTrigger>
+            <TabsTrigger value="yaml" className="h-6 px-2.5 text-[11px]">Source</TabsTrigger>
             <TabsTrigger value="docs" className="h-6 px-2.5 text-[11px]">Docs</TabsTrigger>
           </TabsList>
         </Tabs>
@@ -467,6 +149,7 @@ const RequestEditor: React.FC<{
           >
             <BodySchemaPanel
               spec={spec}
+              title="Request body"
               content={operation.requestBody?.content}
               emptyLabel="No request body on this method."
               onSpecChange={onSpecChange}
@@ -681,6 +364,7 @@ const ResponseEditor: React.FC<{
             <Section title="Body schema">
               <BodySchemaPanel
                 spec={spec}
+                title={`Response ${currentCode} body`}
                 content={response.content}
                 emptyLabel="This status has no response body."
                 onSpecChange={onSpecChange}
@@ -721,21 +405,28 @@ const SpecOverview: React.FC<{
         </Tabs>
       </div>
       {mode === "source" ? (
-        <textarea
-          value={sourceText}
-          onChange={(e) => onSourceChange(e.target.value)}
-          onBlur={() => {
-            try {
-              const parsed = parseSpec(sourceText);
-              onSpecChange(parsed.spec);
-              onFormatChange(parsed.format);
-              onParseError(null);
-            } catch (err) {
-              onParseError(err instanceof Error ? err.message : "Invalid document.");
-            }
-          }}
-          className="flex-1 min-h-0 resize-none bg-background p-4 font-mono text-xs leading-relaxed"
-        />
+        <div className="flex-1 min-h-0 p-3">
+          <CodeEditor
+            value={sourceText}
+            onChange={onSourceChange}
+            onBlur={() => {
+              try {
+                const parsed = parseSpec(sourceText);
+                onSpecChange(parsed.spec);
+                onFormatChange(parsed.format);
+                onParseError(null);
+              } catch (err) {
+                onParseError(err instanceof Error ? err.message : "Invalid document.");
+              }
+            }}
+            language={format}
+            height="100%"
+            className="h-full min-h-[320px]"
+          />
+          <p className="mt-2 text-[10px] text-muted-foreground">
+            Changes sync when you blur the editor or switch tabs.
+          </p>
+        </div>
       ) : (
         <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-3">
           <Section title="API">
@@ -859,6 +550,7 @@ export const OpenApiTool: React.FC = () => {
   const dragCount = useRef(0);
   const [sourceText, setSourceText] = useState("");
   const [spec, setSpec] = useState<OpenAPIDoc | null>(null);
+  const [baselineSpec, setBaselineSpec] = useState<OpenAPIDoc | null>(null);
   const [format, setFormat] = useState<SpecFormat>("json");
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
@@ -866,6 +558,7 @@ export const OpenApiTool: React.FC = () => {
   const [newPath, setNewPath] = useState("/");
   const [newMethod, setNewMethod] = useState<HttpMethod>("get");
   const [dragOver, setDragOver] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
 
   const operations = useMemo(() => (spec ? listOperations(spec) : []), [spec]);
   const filtered = useMemo(() => {
@@ -881,28 +574,18 @@ export const OpenApiTool: React.FC = () => {
     );
   }, [operations, query]);
 
-  const grouped = useMemo(() => {
-    const map = new Map<string, OperationRef[]>();
-    for (const op of filtered) {
-      const tag = op.tags[0] || "default";
-      const list = map.get(tag) ?? [];
-      list.push(op);
-      map.set(tag, list);
-    }
-    return [...map.entries()];
-  }, [filtered]);
-
-  const applySpec = (next: OpenAPIDoc, nextFormat = format) => {
+  const applySpec = (next: OpenAPIDoc, nextFormat = format, resetBaseline = false) => {
     setSpec(next);
     setFormat(nextFormat);
     setSourceText(serializeSpec(next, nextFormat));
     setError(null);
+    if (resetBaseline) setBaselineSpec(cloneSpec(next));
   };
 
   const loadText = (text: string, keepSelection = false) => {
     try {
       const parsed = parseSpec(text);
-      applySpec(parsed.spec, parsed.format);
+      applySpec(parsed.spec, parsed.format, true);
       if (!keepSelection) {
         const ops = listOperations(parsed.spec);
         setSelected(ops[0] ? { path: ops[0].path, method: ops[0].method } : null);
@@ -919,19 +602,6 @@ export const OpenApiTool: React.FC = () => {
   };
   const onUploadRef = useRef(onUpload);
   onUploadRef.current = onUpload;
-
-  const download = () => {
-    if (!spec) return;
-    const blob = new Blob([serializeSpec(spec, format)], {
-      type: format === "yaml" ? "text/yaml" : "application/json",
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${spec.info.title.replace(/\s+/g, "-").toLowerCase() || "openapi"}.${format === "yaml" ? "yaml" : "json"}`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
 
   useEffect(() => {
     const hasFiles = (e: DragEvent) => Array.from(e.dataTransfer?.types ?? []).includes("Files");
@@ -1045,46 +715,14 @@ export const OpenApiTool: React.FC = () => {
                 <FolderOpen className="h-3.5 w-3.5 text-muted-foreground" />
                 Overview
               </button>
-              {grouped.map(([tag, ops]) => (
-                <div key={tag} className="py-1">
-                  <p className="px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{tag}</p>
-                  {ops.map((op) => {
-                    const active = selected?.path === op.path && selected?.method === op.method;
-                    return (
-                      <div
-                        key={op.id}
-                        className={`group flex items-center gap-1.5 px-2 py-1 ${
-                          active ? "bg-muted" : "hover:bg-muted/40"
-                        }`}
-                      >
-                        <button
-                          type="button"
-                          onClick={() => setSelected({ path: op.path, method: op.method })}
-                          className="flex min-w-0 flex-1 items-center gap-2 px-1 py-0.5 text-left"
-                        >
-                          <MethodLabel method={op.method} />
-                          <span className={`truncate font-mono text-[11px] ${active ? "font-semibold" : "text-foreground/80"}`}>
-                            {op.path}
-                          </span>
-                        </button>
-                        <Button
-                          variant="ghost"
-                          size="icon-xs"
-                          className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive"
-                          type="button"
-                          onClick={() => {
-                            const next = removeOperation(spec, op.path, op.method);
-                            applySpec(next);
-                            if (active) setSelected(null);
-                          }}
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    );
-                  })}
-                </div>
-              ))}
+              <EndpointSidebar
+                spec={spec}
+                operations={operations}
+                filtered={filtered}
+                selected={selected}
+                onSelect={setSelected}
+                onSpecChange={(next) => applySpec(next)}
+              />
             </>
           )}
         </div>
@@ -1172,9 +810,9 @@ export const OpenApiTool: React.FC = () => {
                   </SelectContent>
                 </Select>
                 <CopyButton value={serializeSpec(spec, format)} className="h-7 w-7" />
-                <Button variant="outline" size="sm" className="h-7 text-[11px]" type="button" onClick={download}>
+                <Button variant="outline" size="sm" className="h-7 text-[11px]" type="button" onClick={() => setExportOpen(true)}>
                   <Download className="h-3.5 w-3.5 mr-1" />
-                  Save
+                  Export
                 </Button>
               </>
             ) : (
@@ -1189,7 +827,7 @@ export const OpenApiTool: React.FC = () => {
                   type="button"
                   onClick={() => {
                     const sample = cloneSpec(SAMPLE_OPENAPI);
-                    applySpec(sample);
+                    applySpec(sample, format, true);
                     const ops = listOperations(sample);
                     setSelected(ops[0] ? { path: ops[0].path, method: ops[0].method } : null);
                   }}
@@ -1256,6 +894,20 @@ export const OpenApiTool: React.FC = () => {
           )}
         </div>
       </main>
+
+      {spec && baselineSpec ? (
+        <ExportDialog
+          open={exportOpen}
+          onOpenChange={setExportOpen}
+          spec={spec}
+          baselineSpec={baselineSpec}
+          format={format}
+          onFormatChange={(next) => {
+            setFormat(next);
+            setSourceText(serializeSpec(spec, next));
+          }}
+        />
+      ) : null}
     </div>
   );
 };

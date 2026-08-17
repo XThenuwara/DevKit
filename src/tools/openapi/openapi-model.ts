@@ -319,8 +319,98 @@ export const listOperations = (spec: OpenAPIDoc): OperationRef[] => {
       });
     }
   }
-  return ops.sort((a, b) => a.path.localeCompare(b.path) || a.method.localeCompare(b.method));
+  return sortOperationsByOrder(spec, ops);
 };
+
+const OPERATION_ORDER_KEY = "x-devkit-operation-order";
+const TAG_ORDER_KEY = "x-devkit-tag-order";
+
+export const getOperationOrder = (spec: OpenAPIDoc): string[] => {
+  const stored = spec[OPERATION_ORDER_KEY];
+  const ids = new Set<string>();
+  const all: string[] = [];
+  for (const [path, item] of Object.entries(spec.paths ?? {})) {
+    if (!item || typeof item !== "object") continue;
+    for (const method of HTTP_METHODS) {
+      if (!item[method]) continue;
+      const id = `${method}:${path}`;
+      if (!ids.has(id)) {
+        ids.add(id);
+        all.push(id);
+      }
+    }
+  }
+  if (!Array.isArray(stored)) return all;
+  const ordered = stored.filter((id): id is string => typeof id === "string" && ids.has(id));
+  for (const id of all) {
+    if (!ordered.includes(id)) ordered.push(id);
+  }
+  return ordered;
+};
+
+export const setOperationOrder = (spec: OpenAPIDoc, order: string[]): OpenAPIDoc => {
+  const next = cloneSpec(spec);
+  next[OPERATION_ORDER_KEY] = order;
+  return next;
+};
+
+export const getTagOrder = (spec: OpenAPIDoc, tags: string[]): string[] => {
+  const stored = spec[TAG_ORDER_KEY];
+  if (!Array.isArray(stored)) return tags;
+  const ordered = stored.filter((tag): tag is string => typeof tag === "string" && tags.includes(tag));
+  for (const tag of tags) {
+    if (!ordered.includes(tag)) ordered.push(tag);
+  }
+  return ordered;
+};
+
+export const setTagOrder = (spec: OpenAPIDoc, order: string[]): OpenAPIDoc => {
+  const next = cloneSpec(spec);
+  next[TAG_ORDER_KEY] = order;
+  return next;
+};
+
+export const sortOperationsByOrder = (spec: OpenAPIDoc, ops: OperationRef[]): OperationRef[] => {
+  const order = getOperationOrder(spec);
+  const rank = new Map(order.map((id, index) => [id, index]));
+  return [...ops].sort((a, b) => {
+    const diff = (rank.get(a.id) ?? 9999) - (rank.get(b.id) ?? 9999);
+    if (diff !== 0) return diff;
+    return a.path.localeCompare(b.path) || a.method.localeCompare(b.method);
+  });
+};
+
+export const reorderOperation = (
+  spec: OpenAPIDoc,
+  draggedId: string,
+  targetId: string,
+  position: "before" | "after",
+): OpenAPIDoc => {
+  const order = getOperationOrder(spec);
+  const from = order.indexOf(draggedId);
+  const to = order.indexOf(targetId);
+  if (from < 0 || to < 0 || from === to) return spec;
+  const next = [...order];
+  const [item] = next.splice(from, 1);
+  const insertAt = position === "before" ? to : to + 1;
+  const adjusted = from < insertAt ? insertAt - 1 : insertAt;
+  next.splice(adjusted, 0, item);
+  return setOperationOrder(spec, next);
+};
+
+export const PARAM_IN_ORDER: Record<ParameterObject["in"], number> = {
+  path: 0,
+  query: 1,
+  header: 2,
+  cookie: 3,
+};
+
+export const sortParametersByIn = (params: ParameterObject[]): ParameterObject[] =>
+  [...params].sort((a, b) => {
+    const diff = PARAM_IN_ORDER[a.in] - PARAM_IN_ORDER[b.in];
+    if (diff !== 0) return diff;
+    return a.name.localeCompare(b.name);
+  });
 
 export const getPathItem = (spec: OpenAPIDoc, path: string): PathItemObject => {
   spec.paths ??= {};

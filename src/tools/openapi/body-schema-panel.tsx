@@ -1,12 +1,13 @@
-import React, { useMemo, useState } from "react";
-import { Braces, Eye, FileJson, FormInput, Plus } from "lucide-react";
+import React, { useEffect, useMemo, useState } from "react";
+import { Braces, Columns2, Eye, FileJson, FormInput, Maximize2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { CopyButton } from "@/components/shared/copy-button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
+import { CodeEditor } from "./code-editor";
+import { FullscreenModal } from "./fullscreen-modal";
 import { SchemaVisualEditor } from "./schema-visual-editor";
 import {
   componentRef,
@@ -20,7 +21,6 @@ import {
 import type { OpenAPIDoc, SchemaObject } from "./openapi-types";
 
 const PRIMITIVE_TYPES = ["string", "integer", "number", "boolean", "array", "object", "$ref"] as const;
-
 const FORMATS: Record<string, string[]> = {
   string: ["", "date", "date-time", "email", "uuid", "uri"],
   integer: ["", "int32", "int64"],
@@ -33,17 +33,67 @@ type BodySchemaPanelProps = {
   onChange: (content: Record<string, { schema?: SchemaObject; example?: unknown }>) => void;
   onSpecChange: (spec: OpenAPIDoc) => void;
   emptyLabel: string;
+  title?: string;
 };
 
-export const BodySchemaPanel: React.FC<BodySchemaPanelProps> = ({
+const PropertyTree: React.FC<{
+  name: string;
+  schema: SchemaObject;
+  depth?: number;
+  required?: boolean;
+}> = ({ name, schema, depth = 0, required = false }) => {
+  const type = schemaType(schema);
+  const props = schema.properties ?? {};
+  const reqSet = new Set(schema.required ?? []);
+  const [open, setOpen] = useState(depth < 2);
+
+  if (type === "object" && Object.keys(props).length > 0) {
+    return (
+      <div className={depth > 0 ? "ml-3 border-l border-border pl-2" : ""}>
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          className="flex w-full items-center gap-1.5 rounded px-1 py-0.5 text-left text-xs hover:bg-muted/50"
+        >
+          <span className="font-mono font-semibold">{name}</span>
+          <span className="text-[10px] text-muted-foreground">object</span>
+          {required ? <span className="text-[10px] text-amber-600">required</span> : null}
+        </button>
+        {open ? (
+          <div className="mt-0.5 space-y-0.5">
+            {Object.entries(props).map(([key, child]) => (
+              <PropertyTree key={key} name={key} schema={child} depth={depth + 1} required={reqSet.has(key)} />
+            ))}
+          </div>
+        ) : null}
+      </div>
+    );
+  }
+
+  return (
+    <div className={`flex items-center gap-2 rounded px-1 py-0.5 text-xs ${depth > 0 ? "ml-3" : ""}`}>
+      <span className="font-mono font-medium">{name}</span>
+      <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
+        {type}{schema.format ? ` · ${schema.format}` : ""}
+      </span>
+      {required ? <span className="text-[10px] text-amber-600">required</span> : null}
+      {schema.description ? <span className="truncate text-[10px] text-muted-foreground">{schema.description}</span> : null}
+    </div>
+  );
+};
+
+const BodyEditor: React.FC<BodySchemaPanelProps & { fullscreen?: boolean }> = ({
   spec,
   content,
   onChange,
   onSpecChange,
   emptyLabel,
+  fullscreen = false,
 }) => {
-  const [mode, setMode] = useState<"visual" | "form" | "example" | "json">("visual");
+  const [mode, setMode] = useState<"split" | "visual" | "form" | "tree" | "json">("split");
   const [extractName, setExtractName] = useState("");
+  const [exampleDraft, setExampleDraft] = useState("");
+  const [exampleDirty, setExampleDirty] = useState(false);
   const types = contentTypes(content);
   const [contentType, setContentType] = useState(types[0] || "application/json");
   const activeType = types.includes(contentType) ? contentType : types[0] || "application/json";
@@ -60,7 +110,11 @@ export const BodySchemaPanel: React.FC<BodySchemaPanelProps> = ({
   }, [activeType, content, schema, spec]);
 
   const exampleText = JSON.stringify(example ?? {}, null, 2);
-  const jsonText = JSON.stringify(schema ?? {}, null, 2);
+  const schemaJson = JSON.stringify(schema ?? {}, null, 2);
+
+  useEffect(() => {
+    if (!exampleDirty) setExampleDraft(exampleText);
+  }, [exampleText, exampleDirty]);
 
   if (!content || types.length === 0) {
     return (
@@ -99,8 +153,22 @@ export const BodySchemaPanel: React.FC<BodySchemaPanelProps> = ({
     patchSchema(next);
   };
 
+  const applyExample = () => {
+    try {
+      const parsed = JSON.parse(exampleDraft) as unknown;
+      onChange({
+        ...content,
+        [activeType]: { ...content[activeType], example: parsed },
+      });
+      setExampleDirty(false);
+    } catch {
+      /* invalid json */
+    }
+  };
+
   const properties = resolved?.properties ?? {};
   const required = new Set(resolved?.required ?? []);
+  const editorHeight = fullscreen ? "calc(92vh - 180px)" : 320;
 
   return (
     <div className="space-y-3">
@@ -128,6 +196,10 @@ export const BodySchemaPanel: React.FC<BodySchemaPanelProps> = ({
         )}
         <Tabs value={mode} onValueChange={(value) => setMode(value as typeof mode)}>
           <TabsList className="h-7">
+            <TabsTrigger value="split" className="h-6 px-2 text-[11px]">
+              <Columns2 className="h-3 w-3 mr-1" />
+              Split
+            </TabsTrigger>
             <TabsTrigger value="visual" className="h-6 px-2 text-[11px]">
               <Eye className="h-3 w-3 mr-1" />
               Visual
@@ -136,9 +208,9 @@ export const BodySchemaPanel: React.FC<BodySchemaPanelProps> = ({
               <FormInput className="h-3 w-3 mr-1" />
               Fields
             </TabsTrigger>
-            <TabsTrigger value="example" className="h-6 px-2 text-[11px]">
+            <TabsTrigger value="tree" className="h-6 px-2 text-[11px]">
               <FileJson className="h-3 w-3 mr-1" />
-              Example
+              Tree
             </TabsTrigger>
             <TabsTrigger value="json" className="h-6 px-2 text-[11px]">
               <Braces className="h-3 w-3 mr-1" />
@@ -175,6 +247,46 @@ export const BodySchemaPanel: React.FC<BodySchemaPanelProps> = ({
         </div>
       </div>
 
+      {mode === "split" ? (
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+          <div className="space-y-1.5 min-h-0">
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Schema</p>
+              <CopyButton value={schemaJson} className="h-6 w-6" />
+            </div>
+            <SchemaVisualEditor
+              spec={spec}
+              schema={schema ?? { type: "object", properties: {} }}
+              onChange={patchSchema}
+              onSpecChange={onSpecChange}
+            />
+          </div>
+          <div className="space-y-1.5 min-h-0 flex flex-col">
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Example JSON</p>
+              <div className="flex items-center gap-1">
+                {exampleDirty ? (
+                  <Button size="sm" className="h-6 px-2 text-[10px]" type="button" onClick={applyExample}>
+                    Apply example
+                  </Button>
+                ) : null}
+                <CopyButton value={exampleDraft} className="h-6 w-6" />
+              </div>
+            </div>
+            <CodeEditor
+              value={exampleDraft}
+              onChange={(value) => {
+                setExampleDraft(value);
+                setExampleDirty(value !== exampleText);
+              }}
+              language="json"
+              height={editorHeight}
+              className="flex-1 min-h-[240px]"
+            />
+          </div>
+        </div>
+      ) : null}
+
       {mode === "visual" ? (
         <SchemaVisualEditor
           spec={spec}
@@ -184,11 +296,21 @@ export const BodySchemaPanel: React.FC<BodySchemaPanelProps> = ({
         />
       ) : null}
 
+      {mode === "tree" ? (
+        <div className="rounded-md border border-border bg-muted/20 p-3 max-h-[400px] overflow-y-auto">
+          {resolved ? (
+            <PropertyTree name="root" schema={resolved} required />
+          ) : (
+            <p className="text-xs text-muted-foreground">No schema to display.</p>
+          )}
+        </div>
+      ) : null}
+
       {mode === "form" ? (
         <div className="overflow-hidden rounded-md border border-border">
           {schemaType(resolved) !== "object" || !resolved ? (
             <p className="p-3 text-xs text-muted-foreground">
-              Fields view works best with object schemas. Switch to Visual to edit this type.
+              Fields view works best with object schemas. Switch to Visual or Split.
             </p>
           ) : Object.keys(properties).length === 0 ? (
             <div className="flex flex-col items-center gap-2 p-6 text-center">
@@ -360,34 +482,46 @@ export const BodySchemaPanel: React.FC<BodySchemaPanelProps> = ({
         </div>
       ) : null}
 
-      {mode === "example" ? (
-        <div className="relative rounded-lg border border-border bg-muted/20">
-          <div className="absolute right-2 top-2 z-10">
-            <CopyButton value={exampleText} className="h-7 w-7" />
-          </div>
-          <pre className="max-h-[360px] overflow-auto p-3 font-mono text-xs leading-relaxed text-foreground">
-            {exampleText}
-          </pre>
-          <p className="border-t border-border px-3 py-2 text-[10px] text-muted-foreground">
-            Generated from schema{content?.[activeType]?.example !== undefined ? " (custom example set)" : ""}.
-          </p>
-        </div>
-      ) : null}
-
       {mode === "json" ? (
-        <Textarea
-          value={jsonText}
-          onChange={(e) => {
+        <CodeEditor
+          value={schemaJson}
+          onChange={(value) => {
             try {
-              const parsed = JSON.parse(e.target.value) as SchemaObject;
-              patchSchema(parsed);
+              patchSchema(JSON.parse(value) as SchemaObject);
             } catch {
               /* keep typing */
             }
           }}
-          className="min-h-[280px] font-mono text-xs bg-background"
+          language="json"
+          height={editorHeight}
         />
       ) : null}
     </div>
+  );
+};
+
+export const BodySchemaPanel: React.FC<BodySchemaPanelProps> = (props) => {
+  const [fullscreen, setFullscreen] = useState(false);
+  const title = props.title ?? "Body";
+
+  return (
+    <>
+      <BodyEditor {...props} />
+      <div className="flex justify-end pt-1">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-6 px-2 text-[11px]"
+          type="button"
+          onClick={() => setFullscreen(true)}
+        >
+          <Maximize2 className="h-3 w-3 mr-1" />
+          Expand
+        </Button>
+      </div>
+      <FullscreenModal title={title} open={fullscreen} onOpenChange={setFullscreen} showTrigger={false}>
+        <BodyEditor {...props} fullscreen />
+      </FullscreenModal>
+    </>
   );
 };
