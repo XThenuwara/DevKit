@@ -493,3 +493,190 @@ export const contentTypes = (content?: Record<string, unknown>) => Object.keys(c
 
 export const firstContentType = (content?: Record<string, unknown>) =>
   contentTypes(content)[0] || "application/json";
+
+const PRIMITIVE_EXAMPLES: Record<string, unknown> = {
+  string: "string",
+  integer: 0,
+  number: 0,
+  boolean: true,
+};
+
+export const generateExampleFromSchema = (
+  spec: OpenAPIDoc,
+  schema: SchemaObject | undefined,
+  seen = new Set<string>(),
+): unknown => {
+  if (!schema) return null;
+  if (schema.example !== undefined) return schema.example;
+  if (schema.$ref) {
+    const parsed = parseComponentRef(schema.$ref);
+    if (!parsed || parsed.group !== "schemas") return {};
+    if (seen.has(parsed.name)) return {};
+    seen.add(parsed.name);
+    const resolved = spec.components?.schemas?.[parsed.name];
+    return generateExampleFromSchema(spec, resolved, seen);
+  }
+  if (schema.enum?.length) return schema.enum[0];
+  const type = schemaType(schema);
+  if (type === "object") {
+    const out: Record<string, unknown> = {};
+    for (const [key, child] of Object.entries(schema.properties ?? {})) {
+      out[key] = generateExampleFromSchema(spec, child, seen);
+    }
+    return out;
+  }
+  if (type === "array") {
+    const item = generateExampleFromSchema(spec, schema.items, seen);
+    return item === null || item === undefined ? [] : [item];
+  }
+  if (type === "oneOf" || type === "anyOf") {
+    const first = schema.oneOf?.[0] ?? schema.anyOf?.[0];
+    return generateExampleFromSchema(spec, first, seen);
+  }
+  return PRIMITIVE_EXAMPLES[type] ?? null;
+};
+
+export const inlineSchemaRefs = (
+  spec: OpenAPIDoc,
+  schema: SchemaObject | undefined,
+  seen = new Set<string>(),
+): SchemaObject | undefined => {
+  if (!schema) return undefined;
+  if (schema.$ref) {
+    const parsed = parseComponentRef(schema.$ref);
+    if (!parsed || parsed.group !== "schemas") return schema;
+    if (seen.has(parsed.name)) return schema;
+    seen.add(parsed.name);
+    const resolved = spec.components?.schemas?.[parsed.name];
+    if (!resolved) return schema;
+    const inlined = inlineSchemaRefs(spec, cloneSpec(resolved), seen);
+    return inlined ? { ...inlined, title: inlined.title ?? parsed.name } : schema;
+  }
+  const next: SchemaObject = { ...schema };
+  if (schema.properties) {
+    next.properties = {};
+    for (const [key, child] of Object.entries(schema.properties)) {
+      next.properties[key] = inlineSchemaRefs(spec, child, new Set(seen)) ?? child;
+    }
+  }
+  if (schema.items) next.items = inlineSchemaRefs(spec, schema.items, new Set(seen)) ?? schema.items;
+  if (schema.additionalProperties && typeof schema.additionalProperties === "object") {
+    next.additionalProperties =
+      inlineSchemaRefs(spec, schema.additionalProperties, new Set(seen)) ?? schema.additionalProperties;
+  }
+  for (const key of ["oneOf", "anyOf", "allOf"] as const) {
+    if (schema[key]) {
+      next[key] = schema[key]!.map((child) => inlineSchemaRefs(spec, child, new Set(seen)) ?? child);
+    }
+  }
+  return next;
+};
+
+const inlineValueRefs = (spec: OpenAPIDoc, value: unknown, seen = new Set<string>()): unknown => {
+  if (!value || typeof value !== "object") return value;
+  if (Array.isArray(value)) return value.map((item) => inlineValueRefs(spec, item, seen));
+  if (isRef(value) && "$ref" in value && !("type" in value)) {
+    const parsed = parseComponentRef(value.$ref);
+    if (parsed?.group === "schemas") {
+      const resolved = spec.components?.schemas?.[parsed.name];
+      if (resolved) return inlineSchemaRefs(spec, resolved, seen) ?? value;
+    }
+    return value;
+  }
+  const out: Record<string, unknown> = {};
+  for (const [key, child] of Object.entries(value)) {
+    if (key === "schema" && child && typeof child === "object") {
+      out[key] = inlineSchemaRefs(spec, child as SchemaObject, seen) ?? child;
+    } else {
+      out[key] = inlineValueRefs(spec, child, seen);
+    }
+  }
+  return out;
+};
+
+export const buildOperationView = (spec: OpenAPIDoc, path: string, method: HttpMethod) => {
+  const pathItem = spec.paths?.[path];
+  const operation = getOperation(spec, path, method);
+  if (!pathItem || !operation) return {};
+
+  const pathEntry: PathItemObject = {};
+  if (pathItem.parameters?.length) {
+    pathEntry.parameters = cloneSpec(pathItem.parameters).map((param) => {
+      const resolved = resolveRef<ParameterObject>(spec, param) ?? param;
+      return inlineValueRefs(spec, resolved) as ParameterObject;
+    });
+  }
+
+  const inlinedOp = inlineValueRefs(spec, cloneSpec(operation)) as OperationObject;
+  pathEntry[method] = inlinedOp;
+
+  const schemaNames = collectOperationSchemaNames(spec, path, method);
+  const view: Record<string, unknown> = { [path]: pathEntry };
+  if (schemaNames.length) {
+    const schemas: Record<string, SchemaObject> = {};
+    for (const name of schemaNames) {
+      const schema = spec.components?.schemas?.[name];
+      if (schema) schemas[name] = inlineSchemaRefs(spec, cloneSpec(schema)) ?? schema;
+    }
+    view.components = { schemas };
+  }
+  return view;
+};
+
+export const serializeOperationView = (spec: OpenAPIDoc, path: string, method: HttpMethod, format: SpecFormat) => {
+  const view = buildOperationView(spec, path, method);
+  if (format === "yaml") return yamlDump(view, { lineWidth: 100, noRefs: true });
+  return JSON.stringify(view, null, 2);
+};
+
+export const mergeOperationView = (
+  spec: OpenAPIDoc,
+  path: string,
+  method: HttpMethod,
+  text: string,
+  format: SpecFormat,
+): OpenAPIDoc => {
+  const trimmed = text.trim();
+  if (!trimmed) throw new Error("Snippet is empty.");
+
+  const parsed =
+    format === "yaml"
+      ? (yamlLoad(trimmed) as Record<string, unknown>)
+      : (JSON.parse(trimmed) as Record<string, unknown>);
+
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new Error("Snippet must be an object.");
+  }
+
+  let next = cloneSpec(spec);
+  const pathKey =
+    Object.keys(parsed).find((key) => key.startsWith("/")) ??
+    path;
+  const pathItem = parsed[pathKey] as PathItemObject | undefined;
+  if (!pathItem || typeof pathItem !== "object") {
+    throw new Error(`Missing path entry "${pathKey}".`);
+  }
+
+  const operation = pathItem[method] as OperationObject | undefined;
+  if (!operation || typeof operation !== "object") {
+    throw new Error(`Missing ${method.toUpperCase()} operation under "${pathKey}".`);
+  }
+
+  const components = parsed.components as { schemas?: Record<string, SchemaObject> } | undefined;
+  if (components?.schemas) {
+    for (const [name, schema] of Object.entries(components.schemas)) {
+      next = upsertComponentSchema(next, name, schema);
+    }
+  }
+
+  const { parameters, ...operationRest } = pathItem;
+  void operationRest;
+
+  next = updatePathItem(next, pathKey, (item) => ({
+    ...item,
+    ...(parameters ? { parameters: cloneSpec(parameters) } : {}),
+  }));
+
+  next = updateOperation(next, pathKey, method, () => cloneSpec(operation));
+  return next;
+};
