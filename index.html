@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="stone">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
@@ -8,6 +8,20 @@
     <meta name="description" content="A premium, lightning-fast, and purely client-side developer toolbox featuring Base64 conversion, JSON formatting, JWT decoding, Hash generation, and secure password generation." />
     <meta name="keywords" content="developer tools, dev tools, base64 encoder, json formatter, jwt decoder, url encoder, hash generator, uuid generator, unix epoch converter, password generator, text case converter, client-side tools" />
     <meta name="author" content="DevKit" />
+    <script>
+      (function () {
+        try {
+          var palette = localStorage.getItem("devkit-theme-palette") || "stone";
+          var mode = localStorage.getItem("theme") || "system";
+          var dark =
+            mode === "dark" ||
+            (mode !== "light" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+          document.documentElement.dataset.theme = palette;
+          document.documentElement.classList.toggle("dark", dark);
+          document.documentElement.style.colorScheme = dark ? "dark" : "light";
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

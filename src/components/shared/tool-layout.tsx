@@ -74,7 +74,7 @@ export const ToolLayout: React.FC<ToolLayoutProps> = ({
           {/* Header */}
           {title && (
             <div className="flex flex-col gap-0.5 min-w-0">
-              <h1 className="text-base font-extrabold tracking-tight text-foreground">{title}</h1>
+              <h1 className="font-heading text-base font-extrabold tracking-tight text-foreground">{title}</h1>
               <p className="text-[11px] text-muted-foreground/80 leading-normal line-clamp-1" title={description}>
                 {description}
               </p>

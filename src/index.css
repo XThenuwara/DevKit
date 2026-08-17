@@ -2,12 +2,14 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/geist";
+@import "@fontsource/instrument-serif/400.css";
+@import "@fontsource/instrument-serif/400-italic.css";
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
     --color-stone-850: oklch(0.23 0.008 85);
-    --font-heading: var(--font-sans);
+    --font-heading: var(--font-heading-family, var(--font-sans));
     --font-sans: 'Geist Variable', sans-serif;
     --color-sidebar-ring: var(--sidebar-ring);
     --color-sidebar-border: var(--sidebar-border);
@@ -82,6 +84,7 @@
     --sidebar-accent-foreground: oklch(0.25 0.01 85);
     --sidebar-border: oklch(0.88 0.01 85);
     --sidebar-ring: oklch(0.50 0.02 85);
+    color-scheme: light;
 }
 
 .dark {
@@ -116,6 +119,85 @@
     --sidebar-accent-foreground: oklch(0.92 0.006 85);
     --sidebar-border: oklch(0.20 0.008 85);
     --sidebar-ring: oklch(0.70 0.03 85);
+    color-scheme: dark;
+}
+
+html[data-theme="claude"] {
+    --background: #f5f4ed;
+    --foreground: #141413;
+    --card: #faf9f5;
+    --card-foreground: #141413;
+    --popover: #faf9f5;
+    --popover-foreground: #141413;
+    --primary: #c96442;
+    --primary-foreground: #faf9f5;
+    --secondary: #efe9de;
+    --secondary-foreground: #141413;
+    --muted: #efe9de;
+    --muted-foreground: #6c6a64;
+    --accent: #efe9de;
+    --accent-foreground: #141413;
+    --destructive: #c64545;
+    --border: #e6dfd8;
+    --input: #e8e6dc;
+    --ring: #c96442;
+    --chart-1: #c96442;
+    --chart-2: #5db8a6;
+    --chart-3: #d4a017;
+    --chart-4: #6c6a64;
+    --chart-5: #141413;
+    --radius: 0.5rem;
+    --sidebar: #f0eee6;
+    --sidebar-foreground: #141413;
+    --sidebar-primary: #c96442;
+    --sidebar-primary-foreground: #faf9f5;
+    --sidebar-accent: #efe9de;
+    --sidebar-accent-foreground: #141413;
+    --sidebar-border: #e6dfd8;
+    --sidebar-ring: #c96442;
+    --font-heading: "Instrument Serif", "Iowan Old Style", Palatino, Georgia, serif;
+    --font-heading-family: "Instrument Serif", "Iowan Old Style", Palatino, Georgia, serif;
+    color-scheme: light;
+}
+
+html[data-theme="claude"].dark {
+    --background: #141413;
+    --foreground: #faf9f5;
+    --card: #1f1e1b;
+    --card-foreground: #faf9f5;
+    --popover: #252320;
+    --popover-foreground: #faf9f5;
+    --primary: #d97757;
+    --primary-foreground: #141413;
+    --secondary: #252320;
+    --secondary-foreground: #faf9f5;
+    --muted: #252320;
+    --muted-foreground: #a09d96;
+    --accent: #30302e;
+    --accent-foreground: #faf9f5;
+    --destructive: #e07070;
+    --border: #30302e;
+    --input: #30302e;
+    --ring: #d97757;
+    --chart-1: #d97757;
+    --chart-2: #5db8a6;
+    --chart-3: #e8a55a;
+    --chart-4: #a09d96;
+    --chart-5: #faf9f5;
+    --sidebar: #181715;
+    --sidebar-foreground: #faf9f5;
+    --sidebar-primary: #d97757;
+    --sidebar-primary-foreground: #141413;
+    --sidebar-accent: #252320;
+    --sidebar-accent-foreground: #faf9f5;
+    --sidebar-border: #30302e;
+    --sidebar-ring: #d97757;
+    color-scheme: dark;
+}
+
+html[data-theme="claude"] .font-heading {
+    letter-spacing: -0.02em;
+    font-weight: 400;
 }
 
 @layer base {
@@ -131,11 +213,7 @@
 
   * {
     scrollbar-width: thin;
-    scrollbar-color: oklch(0.75 0.01 85 / 0.55) transparent;
-  }
-
-  .dark * {
-    scrollbar-color: oklch(0.40 0.01 85 / 0.55) transparent;
+    scrollbar-color: color-mix(in srgb, var(--muted-foreground) 45%, transparent) transparent;
   }
 
   *::-webkit-scrollbar {
@@ -148,22 +226,14 @@
   }
 
   *::-webkit-scrollbar-thumb {
-    background-color: oklch(0.75 0.01 85 / 0.55);
+    background-color: color-mix(in srgb, var(--muted-foreground) 45%, transparent);
     border-radius: 9999px;
     border: 1px solid transparent;
     background-clip: padding-box;
   }
 
   *::-webkit-scrollbar-thumb:hover {
-    background-color: oklch(0.65 0.01 85 / 0.75);
-  }
-
-  .dark *::-webkit-scrollbar-thumb {
-    background-color: oklch(0.40 0.01 85 / 0.55);
-  }
-
-  .dark *::-webkit-scrollbar-thumb:hover {
-    background-color: oklch(0.50 0.01 85 / 0.75);
+    background-color: color-mix(in srgb, var(--muted-foreground) 70%, transparent);
   }
 
   *::-webkit-scrollbar-corner {

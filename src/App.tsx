@@ -8,10 +8,6 @@ import {
   Calendar,
   CalendarRange,
   Sliders,
-  Sun,
-  Moon,
-  Terminal,
-  ArrowRight,
   Search,
   Command,
   Zap,
@@ -21,6 +17,8 @@ import {
   ImagePlus,
   ScanText,
   Route,
+  Terminal,
+  ArrowRight,
 } from "lucide-react";
 
 const GithubIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -61,6 +59,7 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { ThemeSwitchButton, ThemeSwitchModal } from "@/components/theme-switch-modal";
 
 interface ToolItem {
   id: string;
@@ -285,7 +284,7 @@ const getCategoryColorClasses = (category: string, isActive: boolean) => {
 export default function App() {
   const [activeToolId, setActiveToolId] = useState<string>("");
   const [megaMenuOpen, setMegaMenuOpen] = useState(false);
-  const [theme, setTheme] = useState<"dark" | "light">("dark");
+  const [themeOpen, setThemeOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isCmdKOpen, setIsCmdKOpen] = useState(false);
   const [cmdKQuery, setCmdKQuery] = useState("");
@@ -307,32 +306,6 @@ export default function App() {
     window.addEventListener("hashchange", handleHashChange);
     return () => window.removeEventListener("hashchange", handleHashChange);
   }, []);
-
-  // Sync Theme
-  useEffect(() => {
-    const savedTheme = localStorage.getItem("theme") as "dark" | "light" | null;
-    const systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    const initialTheme = savedTheme || (systemPrefersDark ? "dark" : "light");
-
-    setTheme(initialTheme);
-    if (initialTheme === "dark") {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
-  }, []);
-
-  const toggleTheme = () => {
-    const newTheme = theme === "dark" ? "light" : "dark";
-    setTheme(newTheme);
-    localStorage.setItem("theme", newTheme);
-    if (newTheme === "dark") {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
-    setMegaMenuOpen(false);
-  };
 
   // Keyboard shortcut for Command Palette (Cmd+K / Ctrl+K)
   useEffect(() => {
@@ -416,7 +389,7 @@ export default function App() {
                 <div className="p-1.5 rounded-lg bg-stone-500/10 border border-stone-500/20 text-foreground group-hover:bg-stone-500/20 transition-all">
                   <Zap className="h-4 w-4 text-stone-500 dark:text-stone-400" />
                 </div>
-                <span className="font-extrabold tracking-tight text-sm text-foreground">
+                <span className="font-heading font-extrabold tracking-tight text-sm text-foreground">
                   DevKit Toolbox
                 </span>
               </div>
@@ -473,14 +446,7 @@ export default function App() {
                 <Search className="h-4 w-4" />
               </button>
 
-              {/* Theme Toggle */}
-              <button
-                onClick={toggleTheme}
-                className="p-2 hover:bg-muted/40 rounded-lg text-muted-foreground hover:text-foreground transition-all duration-200"
-                title={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
-              >
-                {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-              </button>
+              <ThemeSwitchButton onClick={() => setThemeOpen(true)} />
 
               {/* Github link */}
               <a
@@ -560,7 +526,7 @@ export default function App() {
                 {/* Dashboard Header / Hero */}
                 <div className="shrink-0 px-6 py-5 border-b border-border/30 bg-card/25 backdrop-blur-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <div className="flex flex-col gap-0.5">
-                    <h1 className="text-sm font-extrabold tracking-tight text-foreground flex items-center gap-2">
+                    <h1 className="font-heading text-sm font-extrabold tracking-tight text-foreground flex items-center gap-2">
                       <span className="p-1 rounded bg-stone-500/10 border border-stone-500/20 text-stone-500 dark:text-stone-400 shrink-0">
                         <Zap className="h-3.5 w-3.5" />
                       </span>
@@ -753,6 +719,8 @@ export default function App() {
             </div>
           </DialogContent>
         </Dialog>
+
+        <ThemeSwitchModal open={themeOpen} onOpenChange={setThemeOpen} />
 
       </div>
     </TooltipProvider>
