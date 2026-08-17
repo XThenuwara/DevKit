@@ -1,137 +1,131 @@
-import React, { useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import { ChevronDown, ChevronRight, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  collectSchemaNames,
-  componentRef,
+  collectFieldCatalog,
   emptySchemaForType,
-  isRef,
-  parseComponentRef,
-  resolveRef,
+  fieldToSchema,
+  filterFieldCatalog,
   schemaType,
-  upsertComponentSchema,
 } from "./openapi-model";
+import { SuggestMenu } from "./suggest-menu";
 import type { OpenAPIDoc, SchemaObject } from "./openapi-types";
 
 const TYPES = ["object", "array", "string", "integer", "number", "boolean", "$ref"] as const;
+const FORMATS: Record<string, string[]> = {
+  string: ["", "date", "date-time", "email", "uuid", "uri"],
+  integer: ["", "int32", "int64"],
+  number: ["", "float", "double"],
+};
 
 type SchemaTreeEditorProps = {
   spec: OpenAPIDoc;
   schema: SchemaObject | undefined;
   onChange: (schema: SchemaObject) => void;
-  onSpecChange: (spec: OpenAPIDoc) => void;
-  name?: string;
-  depth?: number;
 };
 
-const NodeRow: React.FC<{
+const FieldRow: React.FC<{
+  spec: OpenAPIDoc;
   name: string;
   schema: SchemaObject;
-  spec: OpenAPIDoc;
-  required?: boolean;
-  canRename?: boolean;
-  canDelete?: boolean;
-  canToggleRequired?: boolean;
-  onRename?: (next: string) => void;
-  onChange: (schema: SchemaObject) => void;
-  onDelete?: () => void;
-  onToggleRequired?: (required: boolean) => void;
-  onSpecChange: (spec: OpenAPIDoc) => void;
+  required: boolean;
   depth: number;
-}> = ({
-  name,
-  schema,
-  spec,
-  required = false,
-  canRename = false,
-  canDelete = false,
-  canToggleRequired = false,
-  onRename,
-  onChange,
-  onDelete,
-  onToggleRequired,
-  onSpecChange,
-  depth,
-}) => {
-  const [open, setOpen] = useState(depth < 2);
+  onRename: (next: string) => void;
+  onChange: (schema: SchemaObject) => void;
+  onDelete: () => void;
+  onToggleRequired: (required: boolean) => void;
+}> = ({ spec, name, schema, required, depth, onRename, onChange, onDelete, onToggleRequired }) => {
+  const [open, setOpen] = useState(depth < 1);
   const [draftName, setDraftName] = useState(name);
-  const names = collectSchemaNames(spec);
+  const [suggesting, setSuggesting] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const catalog = useMemo(() => collectFieldCatalog(spec), [spec]);
   const type = schemaType(schema);
-  const refInfo = schema.$ref ? parseComponentRef(schema.$ref) : null;
-  const resolved = isRef(schema) ? resolveRef<SchemaObject>(spec, schema) : schema;
-  const properties = resolved?.properties ?? {};
-  const isObject = schemaType(resolved) === "object";
-  const isArray = schemaType(resolved) === "array";
-  const expandable = isObject || isArray || Boolean(refInfo);
+  const expandable = type === "object" || type === "array";
+  const formats = FORMATS[type] ?? [""];
+  const matches = filterFieldCatalog(catalog, draftName, {
+    kinds: ["property", "parameter", "schema"],
+    excludeNames: new Set([name.toLowerCase()]),
+  });
 
-  const patchResolved = (next: SchemaObject) => {
-    if (refInfo?.group === "schemas") {
-      onSpecChange(upsertComponentSchema(spec, refInfo.name, next));
+  const properties = schema.properties ?? {};
+  const requiredSet = new Set(schema.required ?? []);
+
+  const applyName = (nextName: string, nextSchema?: SchemaObject) => {
+    const trimmed = nextName.trim();
+    if (!trimmed) {
+      setDraftName(name);
       return;
     }
-    onChange(next);
-  };
-
-  const setType = (nextType: string) => {
-    if (nextType === "$ref") {
-      onChange({ $ref: names[0] ? componentRef("schemas", names[0]) : "" });
-      return;
-    }
-    const next = emptySchemaForType(nextType);
-    if (schema.description) next.description = schema.description;
-    onChange(next);
-  };
-
-  const addChild = () => {
-    const current = resolved ?? { type: "object", properties: {} };
-    let field = "field";
-    let i = 1;
-    while (current.properties?.[field]) field = `field${i++}`;
-    patchResolved({
-      ...current,
-      type: "object",
-      properties: { ...(current.properties ?? {}), [field]: { type: "string" } },
-    });
-    setOpen(true);
+    if (nextSchema) onChange(nextSchema);
+    if (trimmed !== name) onRename(trimmed);
+    setDraftName(trimmed);
+    setSuggesting(false);
   };
 
   return (
     <div>
       <div
-        className="group/node grid grid-cols-[18px_1fr_92px_28px_28px] items-center gap-1 rounded-md px-1 py-0.5 hover:bg-muted/50"
-        style={{ paddingLeft: depth * 12 }}
+        className="group/node grid grid-cols-[18px_minmax(120px,1.2fr)_88px_88px_36px_1fr_32px] items-center gap-1 rounded-md border border-transparent px-1 py-1 hover:border-border hover:bg-background"
+        style={{ paddingLeft: 8 + depth * 14 }}
       >
         <button
           type="button"
-          className="flex h-6 w-[18px] items-center justify-center text-muted-foreground"
+          className="flex h-7 w-[18px] items-center justify-center text-muted-foreground"
           onClick={() => expandable && setOpen((v) => !v)}
           disabled={!expandable}
         >
           {expandable ? (
-            open ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />
+            open ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />
           ) : (
             <span className="h-1 w-1 rounded-full bg-muted-foreground/40" />
           )}
         </button>
-        {canRename ? (
+        <div className="relative min-w-0">
           <Input
+            ref={inputRef}
             value={draftName}
-            onChange={(e) => setDraftName(e.target.value)}
+            onFocus={() => setSuggesting(true)}
             onBlur={() => {
-              const next = draftName.trim();
-              if (next && next !== name) onRename?.(next);
-              else setDraftName(name);
+              setTimeout(() => setSuggesting(false), 150);
+              applyName(draftName);
             }}
-            className="h-6 border-transparent bg-transparent px-1 font-mono text-xs shadow-none focus-visible:border-border focus-visible:bg-background"
+            onChange={(e) => {
+              setDraftName(e.target.value);
+              setSuggesting(true);
+            }}
+            className="h-7 bg-background font-mono text-xs"
+            placeholder="field"
           />
-        ) : (
-          <span className="truncate px-1 font-mono text-xs font-semibold">{name}</span>
-        )}
-        <Select value={refInfo ? "$ref" : type} onValueChange={setType}>
-          <SelectTrigger className="h-6 px-1.5 text-[10px]">
+          <SuggestMenu
+            open={suggesting}
+            anchor={inputRef.current}
+            items={matches.map((item) => ({
+              id: item.key,
+              title: item.name,
+              badge: item.kind,
+              subtitle: `${item.type ?? item.in ?? item.kind}${item.usedIn[0] ? ` · ${item.usedIn[0]}` : ""}`,
+            }))}
+            onSelect={(id) => {
+              const item = catalog.find((entry) => entry.key === id);
+              if (!item) return;
+              applyName(item.name, fieldToSchema(item));
+            }}
+          />
+        </div>
+        <Select
+          value={type}
+          onValueChange={(value) => {
+            const next = emptySchemaForType(value === "$ref" ? "$ref" : value);
+            if (schema.description) next.description = schema.description;
+            onChange(next);
+            setOpen(true);
+          }}
+        >
+          <SelectTrigger className="h-7 bg-background text-[11px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -142,102 +136,104 @@ const NodeRow: React.FC<{
             ))}
           </SelectContent>
         </Select>
-        {canToggleRequired ? (
-          <label className="flex items-center justify-center" title="Required">
-            <Checkbox
-              checked={required}
-              onCheckedChange={(value) => onToggleRequired?.(value === true)}
-            />
-          </label>
-        ) : (
-          <span />
-        )}
-        {canDelete ? (
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            className="opacity-0 group-hover/node:opacity-100 text-muted-foreground hover:text-destructive"
-            type="button"
-            onClick={onDelete}
-          >
-            <Trash2 className="h-3 w-3" />
-          </Button>
-        ) : (
-          <span />
-        )}
+        <Select
+          value={schema.format ?? ""}
+          onValueChange={(value) => onChange({ ...schema, format: value || undefined })}
+          disabled={!FORMATS[type]}
+        >
+          <SelectTrigger className="h-7 bg-background text-[11px]">
+            <SelectValue placeholder="—" />
+          </SelectTrigger>
+          <SelectContent>
+            {formats.map((fmt) => (
+              <SelectItem key={fmt || "none"} value={fmt}>
+                {fmt || "—"}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <label className="flex items-center justify-center">
+          <Checkbox checked={required} onCheckedChange={(value) => onToggleRequired(value === true)} />
+        </label>
+        <Input
+          value={schema.description ?? ""}
+          onChange={(e) => onChange({ ...schema, description: e.target.value })}
+          className="h-7 bg-background text-xs"
+          placeholder="Description"
+        />
+        <Button
+          variant="ghost"
+          size="icon-xs"
+          className="text-muted-foreground hover:text-destructive"
+          type="button"
+          onClick={onDelete}
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </Button>
       </div>
 
-      {open && refInfo ? (
-        <div className="ml-6 mb-1 flex items-center gap-2 px-1">
-          <Select value={refInfo.name} onValueChange={(next) => onChange({ $ref: componentRef("schemas", next) })}>
-            <SelectTrigger className="h-6 w-[160px] text-[10px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {names.map((item) => (
-                <SelectItem key={item} value={item}>
-                  {item}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      ) : null}
-
-      {open && isObject && resolved ? (
+      {open && type === "object" ? (
         <div>
-          {Object.entries(properties).map(([key, child], index) => (
-            <NodeRow
-              key={`${index}-${key}`}
+          {Object.entries(properties).map(([key, child]) => (
+            <FieldRow
+              key={key}
+              spec={spec}
               name={key}
               schema={child}
-              spec={spec}
+              required={requiredSet.has(key)}
               depth={depth + 1}
-              required={(resolved.required ?? []).includes(key)}
-              canRename
-              canDelete
-              canToggleRequired
               onRename={(nextName) => {
                 if (!nextName || nextName === key || properties[nextName]) return;
                 const nextProps: Record<string, SchemaObject> = {};
                 for (const [propName, value] of Object.entries(properties)) {
                   nextProps[propName === key ? nextName : propName] = value;
                 }
-                patchResolved({
-                  ...resolved,
+                onChange({
+                  ...schema,
+                  type: "object",
                   properties: nextProps,
-                  required: (resolved.required ?? []).map((item) => (item === key ? nextName : item)),
+                  required: (schema.required ?? []).map((item) => (item === key ? nextName : item)),
                 });
               }}
               onChange={(next) =>
-                patchResolved({
-                  ...resolved,
+                onChange({
+                  ...schema,
+                  type: "object",
                   properties: { ...properties, [key]: next },
                 })
               }
               onDelete={() => {
                 const nextProps = { ...properties };
                 delete nextProps[key];
-                patchResolved({
-                  ...resolved,
+                onChange({
+                  ...schema,
                   properties: nextProps,
-                  required: (resolved.required ?? []).filter((item) => item !== key),
+                  required: (schema.required ?? []).filter((item) => item !== key),
                 });
               }}
               onToggleRequired={(isRequired) => {
-                const set = new Set(resolved.required ?? []);
+                const set = new Set(schema.required ?? []);
                 if (isRequired) set.add(key);
                 else set.delete(key);
-                patchResolved({ ...resolved, required: [...set] });
+                onChange({ ...schema, type: "object", required: [...set] });
               }}
-              onSpecChange={onSpecChange}
             />
           ))}
           <button
             type="button"
-            onClick={addChild}
-            className="ml-6 flex items-center gap-1 rounded px-2 py-1 text-[11px] text-muted-foreground hover:bg-muted/50 hover:text-foreground"
-            style={{ paddingLeft: (depth + 1) * 12 }}
+            onClick={() => {
+              let field = "field";
+              let i = 1;
+              while (properties[field]) field = `field${i++}`;
+              onChange({
+                ...schema,
+                type: "object",
+                properties: { ...properties, [field]: { type: "string" } },
+              });
+              setOpen(true);
+            }}
+            className="mb-1 flex items-center gap-1 rounded-md px-2 py-1 text-[11px] text-muted-foreground hover:bg-background hover:text-foreground"
+            style={{ marginLeft: 22 + (depth + 1) * 14 }}
           >
             <Plus className="h-3 w-3" />
             Add field
@@ -245,42 +241,139 @@ const NodeRow: React.FC<{
         </div>
       ) : null}
 
-      {open && isArray && resolved ? (
-        <NodeRow
-          name="items"
-          schema={resolved.items ?? { type: "string" }}
+      {open && type === "array" ? (
+        <FieldRow
           spec={spec}
+          name="items"
+          schema={schema.items ?? { type: "string" }}
+          required={false}
           depth={depth + 1}
-          onChange={(next) => patchResolved({ ...resolved, type: "array", items: next })}
-          onSpecChange={onSpecChange}
+          onRename={() => undefined}
+          onChange={(next) => onChange({ ...schema, type: "array", items: next })}
+          onDelete={() => onChange({ ...schema, type: "array", items: { type: "string" } })}
+          onToggleRequired={() => undefined}
         />
       ) : null}
     </div>
   );
 };
 
-export const SchemaTreeEditor: React.FC<SchemaTreeEditorProps> = ({
-  spec,
-  schema,
-  onChange,
-  onSpecChange,
-  name = "body",
-}) => (
-  <div className="h-full min-h-0 overflow-auto p-1">
-    <div className="mb-1 grid grid-cols-[18px_1fr_92px_28px_28px] gap-1 px-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-      <span />
-      <span>Field</span>
-      <span>Type</span>
-      <span>Req</span>
-      <span />
+export const SchemaTreeEditor: React.FC<SchemaTreeEditorProps> = ({ spec, schema, onChange }) => {
+  const current = schema ?? { type: "object", properties: {} };
+  const type = schemaType(current);
+  const properties = current.properties ?? {};
+  const required = new Set(current.required ?? []);
+
+  return (
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="grid shrink-0 grid-cols-[18px_minmax(120px,1.2fr)_88px_88px_36px_1fr_32px] gap-1 border-b border-border bg-muted/70 px-2 py-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+        <span />
+        <span>Field</span>
+        <span>Type</span>
+        <span>Format</span>
+        <span>Req</span>
+        <span>Description</span>
+        <span />
+      </div>
+      <div className="min-h-0 flex-1 overflow-auto bg-muted/15 p-1">
+        {type !== "object" ? (
+          <div className="space-y-2 p-2">
+            <p className="text-xs text-muted-foreground">
+              Root type is <span className="font-mono font-semibold">{type}</span>. Switch to object to edit fields.
+            </p>
+            <Select value={type} onValueChange={(value) => onChange(emptySchemaForType(value))}>
+              <SelectTrigger className="h-8 w-[160px] bg-background text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {TYPES.map((item) => (
+                  <SelectItem key={item} value={item}>
+                    {item}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        ) : Object.keys(properties).length === 0 ? (
+          <div className="flex flex-col items-center justify-center gap-2 py-10 text-center">
+            <p className="text-xs text-muted-foreground">No fields yet. Add one or pick a name from this spec.</p>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 text-xs"
+              type="button"
+              onClick={() => onChange({ ...current, type: "object", properties: { field: { type: "string" } } })}
+            >
+              <Plus className="h-3 w-3 mr-1" />
+              Add field
+            </Button>
+          </div>
+        ) : (
+          Object.entries(properties).map(([key, child]) => (
+            <FieldRow
+              key={key}
+              spec={spec}
+              name={key}
+              schema={child}
+              required={required.has(key)}
+              depth={0}
+              onRename={(nextName) => {
+                if (!nextName || nextName === key || properties[nextName]) return;
+                const nextProps: Record<string, SchemaObject> = {};
+                for (const [propName, value] of Object.entries(properties)) {
+                  nextProps[propName === key ? nextName : propName] = value;
+                }
+                onChange({
+                  ...current,
+                  properties: nextProps,
+                  required: (current.required ?? []).map((item) => (item === key ? nextName : item)),
+                });
+              }}
+              onChange={(next) =>
+                onChange({
+                  ...current,
+                  type: "object",
+                  properties: { ...properties, [key]: next },
+                })
+              }
+              onDelete={() => {
+                const nextProps = { ...properties };
+                delete nextProps[key];
+                onChange({
+                  ...current,
+                  properties: nextProps,
+                  required: (current.required ?? []).filter((item) => item !== key),
+                });
+              }}
+              onToggleRequired={(isRequired) => {
+                const set = new Set(current.required ?? []);
+                if (isRequired) set.add(key);
+                else set.delete(key);
+                onChange({ ...current, required: [...set] });
+              }}
+            />
+          ))
+        )}
+        {type === "object" && Object.keys(properties).length > 0 ? (
+          <button
+            type="button"
+            onClick={() => {
+              let field = "field";
+              let i = 1;
+              while (properties[field]) field = `field${i++}`;
+              onChange({
+                ...current,
+                type: "object",
+                properties: { ...properties, [field]: { type: "string" } },
+              });
+            }}
+            className="m-1 flex items-center gap-1 rounded-md px-2 py-1.5 text-[11px] text-muted-foreground hover:bg-background hover:text-foreground"
+          >
+            <Plus className="h-3 w-3" />
+            Add field
+          </button>
+        ) : null}
+      </div>
     </div>
-    <NodeRow
-      name={name}
-      schema={schema ?? { type: "object", properties: {} }}
-      spec={spec}
-      depth={0}
-      onChange={onChange}
-      onSpecChange={onSpecChange}
-    />
-  </div>
-);
+  );
+};

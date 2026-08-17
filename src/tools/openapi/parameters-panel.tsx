@@ -5,14 +5,16 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  collectParameterCatalog,
+  collectFieldCatalog,
   emptySchemaForType,
+  fieldToSchema,
+  filterFieldCatalog,
   PARAM_IN_ORDER,
   schemaType,
-  type ParameterSuggestion,
 } from "./openapi-model";
 import { FullscreenModal } from "./fullscreen-modal";
 import { SuggestMenu } from "./suggest-menu";
+import type { FieldSuggestion } from "./openapi-model";
 import type { OpenAPIDoc, ParameterObject } from "./openapi-types";
 
 const PARAM_TYPES = ["string", "integer", "number", "boolean", "array"] as const;
@@ -48,12 +50,12 @@ const buildRows = (pathParams: ParameterObject[], opParams: ParameterObject[]): 
   });
 };
 
-const suggestionToParam = (item: ParameterSuggestion): ParameterObject => ({
+const suggestionToParam = (item: FieldSuggestion, fallbackIn: ParameterObject["in"]): ParameterObject => ({
   name: item.name,
-  in: item.in,
-  required: item.in === "path" ? true : item.required,
+  in: item.in ?? fallbackIn,
+  required: (item.in ?? fallbackIn) === "path",
   description: item.description,
-  schema: item.schema ?? { type: "string" },
+  schema: fieldToSchema(item),
 });
 
 type ParametersTableProps = {
@@ -72,10 +74,11 @@ export const ParametersTable: React.FC<ParametersTableProps> = ({
   onOpChange,
 }) => {
   const [activeName, setActiveName] = useState<string | null>(null);
-  const catalog = useMemo(() => collectParameterCatalog(spec), [spec]);
+  const [anchor, setAnchor] = useState<HTMLElement | null>(null);
+  const catalog = useMemo(() => collectFieldCatalog(spec), [spec]);
   const rows = useMemo(() => buildRows(pathParams, opParams), [pathParams, opParams]);
-  const existing = useMemo(
-    () => new Set(rows.map((row) => `${row.param.in}:${row.param.name}`)),
+  const existingNames = useMemo(
+    () => new Set(rows.map((row) => row.param.name.toLowerCase())),
     [rows],
   );
 
@@ -92,8 +95,8 @@ export const ParametersTable: React.FC<ParametersTableProps> = ({
     else onOpChange(opParams.filter((_, i) => i !== row.index));
   };
 
-  const applySuggestion = (row: ParamRow, item: ParameterSuggestion) => {
-    const next = suggestionToParam(item);
+  const applySuggestion = (row: ParamRow, item: FieldSuggestion) => {
+    const next = suggestionToParam(item, row.param.in);
     if (next.in === "path" && row.source === "operation") {
       onOpChange(opParams.filter((_, i) => i !== row.index));
       onPathChange([...pathParams, next]);
@@ -104,6 +107,7 @@ export const ParametersTable: React.FC<ParametersTableProps> = ({
       patch(row, next);
     }
     setActiveName(null);
+    setAnchor(null);
   };
 
   if (rows.length === 0) {
@@ -133,12 +137,12 @@ export const ParametersTable: React.FC<ParametersTableProps> = ({
           const type = schemaType(schema);
           const formats = PARAM_FORMATS[type] ?? [""];
           const rowKey = `${row.source}-${row.index}`;
-          const matches = catalog.filter((item) => {
-            if (existing.has(item.key) && item.key !== `${param.in}:${param.name}`) return false;
-            const q = param.name.trim().toLowerCase();
-            if (!q || q === "param" || q === "id") return item.name.toLowerCase().includes(q) || q.length < 2;
-            return item.name.toLowerCase().includes(q);
-          }).slice(0, 8);
+          const matches = filterFieldCatalog(catalog, param.name, {
+            kinds: ["parameter", "property", "schema"],
+            excludeNames: new Set(
+              [...existingNames].filter((name) => name !== param.name.toLowerCase()),
+            ),
+          });
           return (
             <div
               key={rowKey}
@@ -149,22 +153,32 @@ export const ParametersTable: React.FC<ParametersTableProps> = ({
               <div className="relative">
                 <Input
                   value={param.name}
-                  onFocus={() => setActiveName(rowKey)}
-                  onBlur={() => setTimeout(() => setActiveName((current) => (current === rowKey ? null : current)), 120)}
+                  onFocus={(e) => {
+                    setActiveName(rowKey);
+                    setAnchor(e.currentTarget);
+                  }}
+                  onBlur={() =>
+                    setTimeout(() => {
+                      setActiveName((current) => (current === rowKey ? null : current));
+                      setAnchor(null);
+                    }, 150)
+                  }
                   onChange={(e) => {
                     patch(row, { ...param, name: e.target.value });
                     setActiveName(rowKey);
+                    setAnchor(e.currentTarget);
                   }}
                   className="h-7 text-xs font-mono bg-background"
                   placeholder="name"
                 />
                 <SuggestMenu
-                  open={activeName === rowKey && matches.length > 0}
+                  open={activeName === rowKey}
+                  anchor={activeName === rowKey ? anchor : null}
                   items={matches.map((item) => ({
                     id: item.key,
                     title: item.name,
-                    badge: item.in,
-                    subtitle: `${item.usedIn[0]}${item.usedIn.length > 1 ? ` +${item.usedIn.length - 1}` : ""}${item.description ? ` · ${item.description}` : ""}`,
+                    badge: item.kind === "parameter" ? item.in ?? "param" : item.kind,
+                    subtitle: `${item.type ?? "string"}${item.usedIn[0] ? ` · ${item.usedIn[0]}` : ""}${item.description ? ` · ${item.description}` : ""}`,
                   }))}
                   onSelect={(id) => {
                     const item = catalog.find((entry) => entry.key === id);
@@ -302,16 +316,19 @@ export const ParametersPanel: React.FC<{
 }> = (props) => {
   const [fullscreen, setFullscreen] = useState(false);
   const [reuseKey, setReuseKey] = useState(0);
-  const catalog = useMemo(() => collectParameterCatalog(props.spec), [props.spec]);
+  const catalog = useMemo(() => collectFieldCatalog(props.spec), [props.spec]);
   const existing = useMemo(
-    () => new Set([...props.pathParams, ...props.opParams].map((param) => `${param.in}:${param.name}`)),
+    () => new Set([...props.pathParams, ...props.opParams].map((param) => param.name.toLowerCase())),
     [props.pathParams, props.opParams],
   );
-  const reusable = catalog.filter((item) => !existing.has(item.key)).slice(0, 12);
+  const reusable = filterFieldCatalog(catalog, "", {
+    kinds: ["parameter", "property"],
+    excludeNames: existing,
+  });
 
-  const add = (location: ParameterObject["in"], from?: ParameterSuggestion) => {
+  const add = (location: ParameterObject["in"], from?: FieldSuggestion) => {
     const param: ParameterObject = from
-      ? suggestionToParam(from)
+      ? suggestionToParam(from, location)
       : {
           name: location === "path" ? "id" : "param",
           in: location,
@@ -339,7 +356,7 @@ export const ParametersPanel: React.FC<{
               key={reuseKey}
               onValueChange={(key) => {
                 const item = catalog.find((entry) => entry.key === key);
-                if (item) add(item.in, item);
+                if (item) add(item.in ?? "query", item);
                 setReuseKey((n) => n + 1);
               }}
             >
@@ -349,7 +366,8 @@ export const ParametersPanel: React.FC<{
               <SelectContent>
                 {reusable.map((item) => (
                   <SelectItem key={item.key} value={item.key}>
-                    {item.in} · {item.name}
+                    {item.name}
+                    {item.kind === "parameter" && item.in ? ` (${item.in})` : ` · ${item.kind}`}
                   </SelectItem>
                 ))}
               </SelectContent>

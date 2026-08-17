@@ -31,7 +31,9 @@ import {
   cloneSpec,
   collectOperationSchemaNames,
   collectPathCatalog,
+  collectFieldCatalog,
   collectSchemaNames,
+  filterFieldCatalog,
   componentRef,
   getOperation,
   HTTP_METHODS,
@@ -563,6 +565,7 @@ export const OpenApiTool: React.FC = () => {
   const [newPath, setNewPath] = useState("/");
   const [newMethod, setNewMethod] = useState<HttpMethod>("get");
   const [pathSuggestOpen, setPathSuggestOpen] = useState(false);
+  const [pathAnchor, setPathAnchor] = useState<HTMLElement | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
 
@@ -581,10 +584,28 @@ export const OpenApiTool: React.FC = () => {
   }, [operations, query]);
 
   const pathCatalog = useMemo(() => (spec ? collectPathCatalog(spec) : []), [spec]);
+  const fieldCatalog = useMemo(() => (spec ? collectFieldCatalog(spec) : []), [spec]);
   const pathSuggestions = useMemo(() => {
-    const q = newPath.trim().toLowerCase();
-    return pathCatalog.filter((path) => !q || path.toLowerCase().includes(q)).slice(0, 8);
-  }, [pathCatalog, newPath]);
+    const q = newPath.trim();
+    const paths = filterFieldCatalog(fieldCatalog, q.startsWith("/") ? q.slice(1) : q, {
+      kinds: ["path", "parameter", "property", "schema"],
+    });
+    const items = paths.map((item) => {
+      if (item.kind === "path") return { id: item.key, title: item.name, subtitle: item.usedIn.join(" · "), badge: "path" };
+      const asPath = item.name.startsWith("/") ? item.name : `/${item.name}`;
+      return {
+        id: item.key,
+        title: asPath,
+        subtitle: `${item.kind}${item.usedIn[0] ? ` · ${item.usedIn[0]}` : ""}`,
+        badge: item.kind,
+      };
+    });
+    const extra = pathCatalog
+      .filter((path) => !q || path.toLowerCase().includes(q.toLowerCase()))
+      .filter((path) => !items.some((item) => item.title === path))
+      .map((path) => ({ id: `raw:${path}`, title: path, badge: "path", subtitle: "existing path" }));
+    return [...extra, ...items].slice(0, 16);
+  }, [fieldCatalog, pathCatalog, newPath]);
 
   const applySpec = (next: OpenAPIDoc, nextFormat = format, resetBaseline = false) => {
     setSpec(next);
@@ -760,26 +781,23 @@ export const OpenApiTool: React.FC = () => {
                   onChange={(e) => {
                     setNewPath(e.target.value);
                     setPathSuggestOpen(true);
+                    setPathAnchor(e.currentTarget);
                   }}
-                  onFocus={() => setPathSuggestOpen(true)}
-                  onBlur={() => setTimeout(() => setPathSuggestOpen(false), 120)}
+                  onFocus={(e) => {
+                    setPathSuggestOpen(true);
+                    setPathAnchor(e.currentTarget);
+                  }}
+                  onBlur={() => setTimeout(() => setPathSuggestOpen(false), 150)}
                   className="h-7 w-full font-mono text-[11px] bg-background"
                   placeholder="/path"
                 />
                 <SuggestMenu
-                  open={pathSuggestOpen && pathSuggestions.length > 0}
-                  items={pathSuggestions.map((path) => ({
-                    id: path,
-                    title: path,
-                    subtitle: spec?.paths?.[path]
-                      ? Object.keys(spec.paths[path] ?? {})
-                          .filter((key) => HTTP_METHODS.includes(key as HttpMethod))
-                          .map((key) => key.toUpperCase())
-                          .join(" · ")
-                      : undefined,
-                  }))}
-                  onSelect={(path) => {
-                    setNewPath(path);
+                  open={pathSuggestOpen}
+                  anchor={pathSuggestOpen ? pathAnchor : null}
+                  items={pathSuggestions}
+                  onSelect={(id) => {
+                    const item = pathSuggestions.find((entry) => entry.id === id);
+                    if (item) setNewPath(item.title);
                     setPathSuggestOpen(false);
                   }}
                 />

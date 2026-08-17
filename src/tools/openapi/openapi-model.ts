@@ -550,6 +550,162 @@ export const collectParameterCatalog = (spec: OpenAPIDoc): ParameterSuggestion[]
 export const collectPathCatalog = (spec: OpenAPIDoc): string[] =>
   Object.keys(spec.paths ?? {}).sort((a, b) => a.localeCompare(b));
 
+export type FieldSuggestion = {
+  key: string;
+  name: string;
+  kind: "property" | "parameter" | "schema" | "path";
+  in?: ParameterObject["in"];
+  type?: string;
+  format?: string;
+  description?: string;
+  schema?: SchemaObject;
+  usedIn: string[];
+};
+
+const PLACEHOLDER_NAMES = new Set(["", "param", "id", "field", "name", "body"]);
+
+const mergeField = (map: Map<string, FieldSuggestion>, item: FieldSuggestion) => {
+  const existing = map.get(item.key);
+  if (existing) {
+    for (const loc of item.usedIn) {
+      if (!existing.usedIn.includes(loc)) existing.usedIn.push(loc);
+    }
+    if (!existing.schema && item.schema) existing.schema = item.schema;
+    if (!existing.description && item.description) existing.description = item.description;
+    if (!existing.type && item.type) existing.type = item.type;
+    if (!existing.format && item.format) existing.format = item.format;
+    return;
+  }
+  map.set(item.key, item);
+};
+
+export const collectFieldCatalog = (spec: OpenAPIDoc): FieldSuggestion[] => {
+  const map = new Map<string, FieldSuggestion>();
+
+  const walkSchema = (schema: SchemaObject | undefined, loc: string, seen: Set<string>) => {
+    if (!schema) return;
+    if (schema.$ref) {
+      const parsed = parseComponentRef(schema.$ref);
+      if (parsed?.group === "schemas") {
+        mergeField(map, {
+          key: `schema:${parsed.name}`,
+          name: parsed.name,
+          kind: "schema",
+          schema: spec.components?.schemas?.[parsed.name],
+          usedIn: [loc],
+        });
+        if (!seen.has(parsed.name)) {
+          seen.add(parsed.name);
+          walkSchema(spec.components?.schemas?.[parsed.name], `schema ${parsed.name}`, seen);
+        }
+      }
+      return;
+    }
+    for (const [name, child] of Object.entries(schema.properties ?? {})) {
+      mergeField(map, {
+        key: `property:${name}`,
+        name,
+        kind: "property",
+        type: schemaType(child),
+        format: typeof child.format === "string" ? child.format : undefined,
+        description: child.description,
+        schema: cloneSpec(child),
+        usedIn: [loc],
+      });
+      walkSchema(child, `${loc}.${name}`, new Set(seen));
+    }
+    if (schema.items) walkSchema(schema.items, `${loc}[]`, seen);
+  };
+
+  for (const [name, schema] of Object.entries(spec.components?.schemas ?? {})) {
+    mergeField(map, {
+      key: `schema:${name}`,
+      name,
+      kind: "schema",
+      schema: cloneSpec(schema),
+      usedIn: ["components"],
+    });
+    walkSchema(schema, name, new Set([name]));
+  }
+
+  for (const [path, item] of Object.entries(spec.paths ?? {})) {
+    if (!item || typeof item !== "object") continue;
+    mergeField(map, { key: `path:${path}`, name: path, kind: "path", usedIn: [path] });
+    for (const match of path.matchAll(/\{([^}]+)\}/g)) {
+      mergeField(map, {
+        key: `parameter:path:${match[1]}`,
+        name: match[1],
+        kind: "parameter",
+        in: "path",
+        type: "string",
+        schema: { type: "string" },
+        usedIn: [path],
+      });
+    }
+    const addParam = (param: ParameterObject, loc: string) => {
+      const resolved = resolveRef<ParameterObject>(spec, param) ?? param;
+      if (!resolved?.name) return;
+      mergeField(map, {
+        key: `parameter:${resolved.in}:${resolved.name}`,
+        name: resolved.name,
+        kind: "parameter",
+        in: resolved.in,
+        type: schemaType(resolved.schema),
+        format: resolved.schema?.format,
+        description: resolved.description,
+        schema: resolved.schema ? cloneSpec(resolved.schema) : { type: "string" },
+        usedIn: [loc],
+      });
+      walkSchema(resolved.schema, loc, new Set());
+    };
+    for (const param of item.parameters ?? []) addParam(param, path);
+    for (const method of HTTP_METHODS) {
+      const operation = item[method] as OperationObject | undefined;
+      if (!operation) continue;
+      const loc = `${method.toUpperCase()} ${path}`;
+      for (const param of operation.parameters ?? []) addParam(param, loc);
+      const body = resolveRef<RequestBodyObject>(spec, operation.requestBody);
+      for (const media of Object.values(body?.content ?? {})) walkSchema(media.schema, `${loc} body`, new Set());
+      for (const response of Object.values(operation.responses ?? {})) {
+        const resolved = resolveRef<ResponseObject>(spec, response);
+        for (const media of Object.values(resolved?.content ?? {})) walkSchema(media.schema, `${loc} response`, new Set());
+      }
+    }
+  }
+
+  return [...map.values()].sort((a, b) => a.name.localeCompare(b.name) || a.kind.localeCompare(b.kind));
+};
+
+export const filterFieldCatalog = (
+  items: FieldSuggestion[],
+  query: string,
+  options?: { kinds?: FieldSuggestion["kind"][]; excludeNames?: Set<string> },
+): FieldSuggestion[] => {
+  const q = query.trim().toLowerCase();
+  const placeholder = PLACEHOLDER_NAMES.has(q);
+  return items
+    .filter((item) => {
+      if (options?.kinds && !options.kinds.includes(item.kind)) return false;
+      if (options?.excludeNames?.has(item.name.toLowerCase()) && item.name.toLowerCase() !== q) return false;
+      if (placeholder) return true;
+      return (
+        item.name.toLowerCase().includes(q) ||
+        item.usedIn.some((loc) => loc.toLowerCase().includes(q)) ||
+        (item.description ?? "").toLowerCase().includes(q)
+      );
+    })
+    .slice(0, 16);
+};
+
+export const fieldToSchema = (item: FieldSuggestion): SchemaObject => {
+  if (item.kind === "schema") return { $ref: componentRef("schemas", item.name) };
+  if (item.schema) return cloneSpec(item.schema);
+  const next: SchemaObject = { type: item.type || "string" };
+  if (item.format) next.format = item.format;
+  if (item.description) next.description = item.description;
+  return next;
+};
+
 export const removeOperation = (spec: OpenAPIDoc, path: string, method: HttpMethod): OpenAPIDoc => {
   const next = cloneSpec(spec);
   const item = next.paths?.[path];

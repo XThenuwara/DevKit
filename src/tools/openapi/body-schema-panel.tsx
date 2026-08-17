@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Maximize2, Plus } from "lucide-react";
+import { Link2, Link2Off, Maximize2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/shared/copy-button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,7 @@ import {
   contentTypes,
   generateExampleFromSchema,
   isRef,
+  parseComponentRef,
   resolveRef,
   upsertComponentSchema,
 } from "./openapi-model";
@@ -41,20 +42,22 @@ const BodyEditor: React.FC<BodySchemaPanelProps> = ({
   const types = contentTypes(content);
   const [contentType, setContentType] = useState(types[0] || "application/json");
   const activeType = types.includes(contentType) ? contentType : types[0] || "application/json";
-  const schema = content?.[activeType]?.schema;
+  const rawSchema = content?.[activeType]?.schema;
+  const refInfo = rawSchema?.$ref ? parseComponentRef(rawSchema.$ref) : null;
   const resolved = useMemo(() => {
-    if (!schema) return undefined;
-    return isRef(schema) ? resolveRef<SchemaObject>(spec, schema) : schema;
-  }, [schema, spec]);
+    if (!rawSchema) return { type: "object", properties: {} } satisfies SchemaObject;
+    if (isRef(rawSchema)) return resolveRef<SchemaObject>(spec, rawSchema) ?? { type: "object", properties: {} };
+    return rawSchema;
+  }, [rawSchema, spec]);
 
   const example = useMemo(() => {
     const explicit = content?.[activeType]?.example;
     if (explicit !== undefined) return explicit;
-    return generateExampleFromSchema(spec, schema);
-  }, [activeType, content, schema, spec]);
+    return generateExampleFromSchema(spec, rawSchema ?? resolved);
+  }, [activeType, content, rawSchema, resolved, spec]);
 
   const exampleText = JSON.stringify(example ?? {}, null, 2);
-  const schemaJson = JSON.stringify(schema ?? {}, null, 2);
+  const schemaJson = JSON.stringify(resolved ?? {}, null, 2);
 
   useEffect(() => {
     if (!exampleDirty) setExampleDraft(exampleText);
@@ -64,14 +67,26 @@ const BodyEditor: React.FC<BodySchemaPanelProps> = ({
     setSchemaDraft(schemaJson);
   }, [schemaJson]);
 
+  const commitSchema = (next: SchemaObject) => {
+    if (refInfo?.group === "schemas") {
+      onSpecChange(upsertComponentSchema(spec, refInfo.name, next));
+      return;
+    }
+    onChange({
+      ...content,
+      [activeType]: { ...content?.[activeType], schema: next },
+    });
+  };
+
   if (!content || types.length === 0) {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border bg-muted/30 py-8 text-center">
-        <p className="text-xs text-muted-foreground">{emptyLabel}</p>
+      <div className="flex h-full flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-card py-10 text-center">
+        <p className="text-sm font-semibold">No body defined</p>
+        <p className="max-w-sm text-xs text-muted-foreground">{emptyLabel}</p>
         <Button
           variant="outline"
           size="sm"
-          className="h-7 text-xs"
+          className="h-8 text-xs"
           type="button"
           onClick={() => onChange({ "application/json": { schema: { type: "object", properties: {} } } })}
         >
@@ -81,13 +96,6 @@ const BodyEditor: React.FC<BodySchemaPanelProps> = ({
       </div>
     );
   }
-
-  const patchSchema = (next: SchemaObject) => {
-    onChange({
-      ...content,
-      [activeType]: { ...content[activeType], schema: next },
-    });
-  };
 
   const applyExample = () => {
     try {
@@ -103,78 +111,85 @@ const BodyEditor: React.FC<BodySchemaPanelProps> = ({
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-2">
-      <div className="flex shrink-0 flex-wrap items-center gap-2">
-        {types.length > 1 ? (
-          <Tabs value={activeType} onValueChange={setContentType}>
-            <TabsList className="h-7">
-              {types.map((type) => (
-                <TabsTrigger key={type} value={type} className="h-6 px-2 text-[10px] font-mono">
-                  {type.replace("application/", "")}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
+    <div className="flex h-full min-h-0 flex-col gap-3">
+      <div className="flex shrink-0 flex-wrap items-center gap-2 rounded-xl border border-border bg-card px-3 py-2">
+        <Input
+          value={activeType}
+          onChange={(e) => {
+            const nextType = e.target.value || "application/json";
+            onChange({ [nextType]: content[activeType] });
+            setContentType(nextType);
+          }}
+          className="h-8 w-[200px] text-xs font-mono bg-background"
+        />
+        {refInfo ? (
+          <div className="flex items-center gap-1.5 rounded-md border border-sky-500/20 bg-sky-500/10 px-2 py-1 text-[11px] text-sky-800 dark:text-sky-300">
+            <Link2 className="h-3 w-3" />
+            <span className="font-semibold">#{refInfo.name}</span>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 px-1.5 text-[10px]"
+              type="button"
+              onClick={() =>
+                onChange({
+                  ...content,
+                  [activeType]: { ...content[activeType], schema: structuredClone(resolved) },
+                })
+              }
+            >
+              <Link2Off className="h-3 w-3 mr-1" />
+              Unlink
+            </Button>
+          </div>
         ) : (
-          <Input
-            value={activeType}
-            onChange={(e) => {
-              const nextType = e.target.value || "application/json";
-              onChange({ [nextType]: content[activeType] });
-              setContentType(nextType);
-            }}
-            className="h-7 w-[190px] text-xs font-mono bg-background"
-          />
+          <div className="ml-auto flex items-center gap-1.5">
+            <Input
+              value={extractName}
+              onChange={(e) => setExtractName(e.target.value)}
+              placeholder="Save as schema…"
+              className="h-8 w-[140px] text-xs bg-background"
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 text-xs"
+              type="button"
+              disabled={!extractName.trim()}
+              onClick={() => {
+                const name = extractName.trim();
+                onSpecChange(upsertComponentSchema(spec, name, resolved));
+                onChange({
+                  ...content,
+                  [activeType]: { ...content[activeType], schema: { $ref: componentRef("schemas", name) } },
+                });
+                setExtractName("");
+              }}
+            >
+              Save as $ref
+            </Button>
+          </div>
         )}
-        <div className="ml-auto flex items-center gap-1.5">
-          <Input
-            value={extractName}
-            onChange={(e) => setExtractName(e.target.value)}
-            placeholder="Schema name"
-            className="h-7 w-[120px] text-xs bg-background"
-          />
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-7 text-xs"
-            type="button"
-            disabled={!extractName.trim() || !schema}
-            onClick={() => {
-              const name = extractName.trim();
-              const resolvedSchema = resolved ?? { type: "object" };
-              onSpecChange(upsertComponentSchema(spec, name, resolvedSchema));
-              onChange({
-                ...content,
-                [activeType]: { ...content[activeType], schema: { $ref: componentRef("schemas", name) } },
-              });
-              setExtractName("");
-            }}
-          >
-            Save as $ref
-          </Button>
-        </div>
       </div>
 
-      <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 lg:grid-cols-2">
-        <div className="flex min-h-[240px] flex-col overflow-hidden rounded-xl border border-border bg-card shadow-sm lg:min-h-0">
-          <div className="shrink-0 border-b border-border bg-muted/50 px-3 py-2">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Schema tree</p>
+      <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
+        <div className="relative z-10 flex min-h-[280px] flex-col overflow-hidden rounded-xl border border-border bg-card shadow-sm lg:min-h-0">
+          <div className="shrink-0 border-b border-border bg-muted/40 px-3 py-2">
+            <p className="text-[11px] font-bold uppercase tracking-wider">Fields</p>
+            <p className="text-[10px] text-muted-foreground">
+              {refInfo ? `Editing shared schema ${refInfo.name}` : "Edits write into this request/response body"}
+            </p>
           </div>
-          <div className="min-h-0 flex-1 p-2">
-            <SchemaTreeEditor
-              spec={spec}
-              schema={schema ?? { type: "object", properties: {} }}
-              onChange={patchSchema}
-              onSpecChange={onSpecChange}
-            />
+          <div className="min-h-0 flex-1">
+            <SchemaTreeEditor spec={spec} schema={resolved} onChange={commitSchema} />
           </div>
         </div>
-        <div className="flex min-h-[240px] flex-col overflow-hidden rounded-xl border border-border bg-background shadow-sm lg:min-h-0">
-          <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border bg-muted/50 px-3 py-2">
+        <div className="relative z-0 flex min-h-[280px] min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-background shadow-sm lg:min-h-0">
+          <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border bg-muted/40 px-3 py-2">
             <Tabs value={jsonView} onValueChange={(value) => setJsonView(value as "example" | "schema")}>
               <TabsList className="h-7">
                 <TabsTrigger value="example" className="h-6 px-2 text-[11px]">
-                  Example JSON
+                  Example
                 </TabsTrigger>
                 <TabsTrigger value="schema" className="h-6 px-2 text-[11px]">
                   Schema JSON
@@ -184,7 +199,7 @@ const BodyEditor: React.FC<BodySchemaPanelProps> = ({
             <div className="flex items-center gap-1">
               {jsonView === "example" && exampleDirty ? (
                 <Button size="sm" className="h-6 px-2 text-[10px]" type="button" onClick={applyExample}>
-                  Apply
+                  Save example
                 </Button>
               ) : null}
               <CopyButton value={jsonView === "example" ? exampleDraft : schemaDraft} className="h-6 w-6" />
@@ -208,7 +223,7 @@ const BodyEditor: React.FC<BodySchemaPanelProps> = ({
                 onChange={(value) => {
                   setSchemaDraft(value);
                   try {
-                    patchSchema(JSON.parse(value) as SchemaObject);
+                    commitSchema(JSON.parse(value) as SchemaObject);
                   } catch {
                     /* keep typing */
                   }
@@ -231,21 +246,27 @@ export const BodySchemaPanel: React.FC<BodySchemaPanelProps> = (props) => {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="min-h-0 flex-1">
-        <BodyEditor {...props} />
-      </div>
-      <div className="flex shrink-0 justify-end pt-2">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-6 px-2 text-[11px]"
-          type="button"
-          onClick={() => setFullscreen(true)}
-        >
-          <Maximize2 className="h-3 w-3 mr-1" />
-          Expand
-        </Button>
-      </div>
+      {!fullscreen ? (
+        <>
+          <div className="min-h-0 flex-1">
+            <BodyEditor {...props} />
+          </div>
+          <div className="flex shrink-0 justify-end pt-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 px-2 text-[11px]"
+              type="button"
+              onClick={() => setFullscreen(true)}
+            >
+              <Maximize2 className="h-3 w-3 mr-1" />
+              Expand
+            </Button>
+          </div>
+        </>
+      ) : (
+        <p className="text-xs text-muted-foreground">Editing in fullscreen…</p>
+      )}
       <FullscreenModal title={title} open={fullscreen} onOpenChange={setFullscreen} showTrigger={false}>
         <BodyEditor {...props} />
       </FullscreenModal>
