@@ -133,44 +133,32 @@ const RequestEditor: React.FC<{
         )}
 
         {tab === "body" && (
-          <Section
-            fill
+          <BodySchemaPanel
+            spec={spec}
             title="Request body"
-            action={
-              <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                <Checkbox
-                  checked={Boolean(operation.requestBody?.required)}
-                  onCheckedChange={(value) =>
-                    patchOp({
-                      ...operation,
-                      requestBody: {
-                        ...(operation.requestBody ?? { content: { "application/json": { schema: { type: "object" } } } }),
-                        required: value === true,
-                      },
-                    })
-                  }
-                />
-                Required
-              </label>
+            content={operation.requestBody?.content}
+            emptyLabel="No request body on this method."
+            required={Boolean(operation.requestBody?.required)}
+            onRequiredChange={(value) =>
+              patchOp({
+                ...operation,
+                requestBody: {
+                  ...(operation.requestBody ?? { content: { "application/json": { schema: { type: "object" } } } }),
+                  required: value,
+                },
+              })
             }
-          >
-            <BodySchemaPanel
-              spec={spec}
-              title="Request body"
-              content={operation.requestBody?.content}
-              emptyLabel="No request body on this method."
-              onSpecChange={onSpecChange}
-              onChange={(content) =>
-                patchOp({
-                  ...operation,
-                  requestBody: {
-                    ...(operation.requestBody ?? {}),
-                    content,
-                  } as RequestBodyObject,
-                })
-              }
-            />
-          </Section>
+            onSpecChange={onSpecChange}
+            onChange={(content) =>
+              patchOp({
+                ...operation,
+                requestBody: {
+                  ...(operation.requestBody ?? {}),
+                  content,
+                } as RequestBodyObject,
+              })
+            }
+          />
         )}
 
         {tab === "yaml" && (
@@ -368,7 +356,7 @@ const ResponseEditor: React.FC<{
                 </label>
               </div>
             </Section>
-            <Section title="Body schema" fill>
+            <div className="min-h-0 flex-1">
               <BodySchemaPanel
                 spec={spec}
                 title={`Response ${currentCode} body`}
@@ -377,7 +365,7 @@ const ResponseEditor: React.FC<{
                 onSpecChange={onSpecChange}
                 onChange={(content) => patchResponse(currentCode, { ...response, content })}
               />
-            </Section>
+            </div>
           </>
         ) : (
           <p className="text-xs text-muted-foreground">Add a status code to describe a response.</p>

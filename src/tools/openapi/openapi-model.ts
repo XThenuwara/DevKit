@@ -822,6 +822,78 @@ export const emptySchemaForType = (type: string): SchemaObject => {
   return { type };
 };
 
+export const uniqueName = (existing: Iterable<string>, base: string): string => {
+  const used = new Set([...existing].map((name) => name.toLowerCase()));
+  if (!used.has(base.toLowerCase())) return base;
+  let index = 2;
+  while (used.has(`${base}${index}`.toLowerCase())) index += 1;
+  return `${base}${index}`;
+};
+
+export const sharedPathPrefix = (paths: string[]): string => {
+  const unique = [...new Set(paths.filter(Boolean))];
+  if (unique.length < 2) return "";
+  let prefix = unique[0];
+  for (const path of unique.slice(1)) {
+    let index = 0;
+    const limit = Math.min(prefix.length, path.length);
+    while (index < limit && prefix[index] === path[index]) index += 1;
+    prefix = prefix.slice(0, index);
+  }
+  const lastSlash = prefix.lastIndexOf("/");
+  if (lastSlash <= 0) return "";
+  prefix = prefix.slice(0, lastSlash);
+  const hasRemainder = unique.every((path) => path.length > prefix.length + 1);
+  if (!hasRemainder) {
+    const previous = prefix.lastIndexOf("/");
+    if (previous <= 0) return "";
+    prefix = prefix.slice(0, previous);
+  }
+  return prefix;
+};
+
+export const displayPath = (path: string, prefix: string): string => {
+  if (!prefix) return path;
+  if (path === prefix) return "/";
+  if (path.startsWith(`${prefix}/`)) return path.slice(prefix.length) || "/";
+  if (path.startsWith(prefix)) {
+    const rest = path.slice(prefix.length);
+    return rest.startsWith("/") ? rest : `/${rest}`;
+  }
+  return path;
+};
+
+export const inferSchemaFromJson = (value: unknown): SchemaObject => {
+  if (Array.isArray(value)) {
+    return {
+      type: "array",
+      items: value.length ? inferSchemaFromJson(value[0]) : { type: "string" },
+    };
+  }
+  if (value !== null && typeof value === "object") {
+    const properties: Record<string, SchemaObject> = {};
+    const required: string[] = [];
+    for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
+      properties[key] = inferSchemaFromJson(child);
+      if (child !== null && child !== undefined) required.push(key);
+    }
+    return { type: "object", properties, required };
+  }
+  if (typeof value === "boolean") return { type: "boolean" };
+  if (typeof value === "number") return Number.isInteger(value) ? { type: "integer" } : { type: "number" };
+  if (value === null) return { type: "string", nullable: true };
+  return { type: "string" };
+};
+
+export const COMMON_MEDIA_TYPES = [
+  "application/json",
+  "application/xml",
+  "multipart/form-data",
+  "application/x-www-form-urlencoded",
+  "text/plain",
+  "application/octet-stream",
+] as const;
+
 export const contentTypes = (content?: Record<string, unknown>) => Object.keys(content ?? {});
 
 export const firstContentType = (content?: Record<string, unknown>) =>

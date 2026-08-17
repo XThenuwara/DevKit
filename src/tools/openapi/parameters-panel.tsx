@@ -11,6 +11,7 @@ import {
   filterFieldCatalog,
   PARAM_IN_ORDER,
   schemaType,
+  uniqueName,
 } from "./openapi-model";
 import { FullscreenModal } from "./fullscreen-modal";
 import { SuggestMenu } from "./suggest-menu";
@@ -64,6 +65,7 @@ type ParametersTableProps = {
   opParams: ParameterObject[];
   onPathChange: (parameters: ParameterObject[]) => void;
   onOpChange: (parameters: ParameterObject[]) => void;
+  onAdd: (location: ParameterObject["in"], from?: FieldSuggestion) => void;
 };
 
 export const ParametersTable: React.FC<ParametersTableProps> = ({
@@ -72,6 +74,7 @@ export const ParametersTable: React.FC<ParametersTableProps> = ({
   opParams,
   onPathChange,
   onOpChange,
+  onAdd,
 }) => {
   const [activeName, setActiveName] = useState<string | null>(null);
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
@@ -112,8 +115,22 @@ export const ParametersTable: React.FC<ParametersTableProps> = ({
 
   if (rows.length === 0) {
     return (
-      <div className="flex h-full items-center justify-center rounded-xl border border-dashed border-border bg-background/80">
-        <p className="text-xs text-muted-foreground">No parameters. Path params are inferred from the URL template.</p>
+      <div className="flex h-full flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-background/80">
+        <p className="text-xs text-muted-foreground">No parameters yet. Add a field or reuse one from this spec.</p>
+        <div className="flex flex-wrap items-center justify-center gap-1.5">
+          <Button variant="outline" size="sm" className="h-7 text-xs" type="button" onClick={() => onAdd("path")}>
+            <Plus className="h-3 w-3 mr-1" />
+            Path
+          </Button>
+          <Button variant="outline" size="sm" className="h-7 text-xs" type="button" onClick={() => onAdd("query")}>
+            <Plus className="h-3 w-3 mr-1" />
+            Query
+          </Button>
+          <Button variant="outline" size="sm" className="h-7 text-xs" type="button" onClick={() => onAdd("header")}>
+            <Plus className="h-3 w-3 mr-1" />
+            Header
+          </Button>
+        </div>
       </div>
     );
   }
@@ -302,6 +319,22 @@ export const ParametersTable: React.FC<ParametersTableProps> = ({
             </div>
           );
         })}
+        <div className="sticky bottom-0 flex items-center gap-1.5 border-t border-border bg-card px-2 py-2">
+          <Button variant="outline" size="sm" className="h-7 text-xs" type="button" onClick={() => onAdd("query")}>
+            <Plus className="h-3 w-3 mr-1" />
+            Add field
+          </Button>
+          <span className="text-[10px] text-muted-foreground">or</span>
+          <Button variant="ghost" size="sm" className="h-7 text-[11px]" type="button" onClick={() => onAdd("path")}>
+            Path
+          </Button>
+          <Button variant="ghost" size="sm" className="h-7 text-[11px]" type="button" onClick={() => onAdd("query")}>
+            Query
+          </Button>
+          <Button variant="ghost" size="sm" className="h-7 text-[11px]" type="button" onClick={() => onAdd("header")}>
+            Header
+          </Button>
+        </div>
       </div>
     </div>
   );
@@ -327,10 +360,13 @@ export const ParametersPanel: React.FC<{
   });
 
   const add = (location: ParameterObject["in"], from?: FieldSuggestion) => {
+    const existing = [...props.pathParams, ...props.opParams].map((param) => param.name);
+    const fallback =
+      location === "path" ? "id" : location === "header" ? "X-Header" : "param";
     const param: ParameterObject = from
-      ? suggestionToParam(from, location)
+      ? { ...suggestionToParam(from, location), name: uniqueName(existing, from.name) }
       : {
-          name: location === "path" ? "id" : "param",
+          name: uniqueName(existing, fallback),
           in: location,
           required: location === "path",
           schema: { type: "string" },
@@ -339,47 +375,65 @@ export const ParametersPanel: React.FC<{
     else props.onOpChange([...props.opParams, param]);
   };
 
+  const renderAddToolbar = () => (
+    <div className="flex items-center gap-1">
+      <Button variant="outline" size="sm" className="h-6 px-2 text-[11px]" onClick={() => add("query")} type="button">
+        <Plus className="h-3 w-3 mr-1" />
+        Add field
+      </Button>
+      <Button variant="ghost" size="sm" className="h-6 px-2 text-[11px]" onClick={() => add("path")} type="button">
+        Path
+      </Button>
+      <Button variant="ghost" size="sm" className="h-6 px-2 text-[11px]" onClick={() => add("query")} type="button">
+        Query
+      </Button>
+      <Button variant="ghost" size="sm" className="h-6 px-2 text-[11px]" onClick={() => add("header")} type="button">
+        Header
+      </Button>
+      {reusable.length > 0 ? (
+        <Select
+          key={reuseKey}
+          onValueChange={(key) => {
+            const item = catalog.find((entry) => entry.key === key);
+            if (item) add(item.in ?? "query", item);
+            setReuseKey((n) => n + 1);
+          }}
+        >
+          <SelectTrigger className="h-6 w-[108px] text-[11px]">
+            <SelectValue placeholder="Reuse…" />
+          </SelectTrigger>
+          <SelectContent>
+            {reusable.map((item) => (
+              <SelectItem key={item.key} value={item.key}>
+                {item.name}
+                {item.kind === "parameter" && item.in ? ` (${item.in})` : ` · ${item.kind}`}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      ) : null}
+    </div>
+  );
+
   return (
     <section className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-border bg-muted/30 shadow-sm">
       <header className="flex shrink-0 items-center justify-between gap-2 border-b border-border bg-card px-3 py-2">
         <h3 className="text-[11px] font-bold uppercase tracking-wider text-foreground">Parameters</h3>
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="sm" className="h-6 px-2 text-[11px]" onClick={() => add("query")} type="button">
-            <Plus className="h-3 w-3 mr-1" />
-            Query
-          </Button>
-          <Button variant="ghost" size="sm" className="h-6 px-2 text-[11px]" onClick={() => add("header")} type="button">
-            Header
-          </Button>
-          {reusable.length > 0 ? (
-            <Select
-              key={reuseKey}
-              onValueChange={(key) => {
-                const item = catalog.find((entry) => entry.key === key);
-                if (item) add(item.in ?? "query", item);
-                setReuseKey((n) => n + 1);
-              }}
-            >
-              <SelectTrigger className="h-6 w-[108px] text-[11px]">
-                <SelectValue placeholder="Reuse…" />
-              </SelectTrigger>
-              <SelectContent>
-                {reusable.map((item) => (
-                  <SelectItem key={item.key} value={item.key}>
-                    {item.name}
-                    {item.kind === "parameter" && item.in ? ` (${item.in})` : ` · ${item.kind}`}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          ) : null}
-          <FullscreenModal title="Parameters" open={fullscreen} onOpenChange={setFullscreen} triggerLabel="Expand">
-            <ParametersTable {...props} />
+          {renderAddToolbar()}
+          <FullscreenModal
+            title="Parameters"
+            open={fullscreen}
+            onOpenChange={setFullscreen}
+            triggerLabel="Expand"
+            headerAction={renderAddToolbar()}
+          >
+            <ParametersTable {...props} onAdd={add} />
           </FullscreenModal>
         </div>
       </header>
       <div className="min-h-0 flex-1 p-3">
-        <ParametersTable {...props} />
+        <ParametersTable {...props} onAdd={add} />
       </div>
     </section>
   );

@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { ChevronDown, ChevronRight, Copy, GripVertical, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { duplicateOperation, getTagOrder, removeOperation, reorderOperation, getOperationOrder } from "./openapi-model";
+import { duplicateOperation, getTagOrder, removeOperation, reorderOperation, getOperationOrder, sharedPathPrefix, displayPath } from "./openapi-model";
 import type { HttpMethod, OpenAPIDoc, OperationRef } from "./openapi-types";
 
 const METHOD_COLOR: Record<string, string> = {
@@ -64,6 +64,11 @@ export const EndpointSidebar: React.FC<EndpointSidebarProps> = ({
     return tags.map((tag) => [tag, map.get(tag) ?? []] as const);
   }, [filtered, spec]);
 
+  const pathPrefix = useMemo(
+    () => sharedPathPrefix(operations.map((op) => op.path)),
+    [operations],
+  );
+
   const toggleTag = (tag: string) => {
     setCollapsed((prev) => ({ ...prev, [tag]: !prev[tag] }));
   };
@@ -77,6 +82,11 @@ export const EndpointSidebar: React.FC<EndpointSidebarProps> = ({
 
   return (
     <>
+      {pathPrefix ? (
+        <div className="border-b border-border px-3 py-1.5 text-[10px] text-muted-foreground">
+          Base <span className="font-mono font-semibold text-foreground/80">{pathPrefix}</span>
+        </div>
+      ) : null}
       {grouped.map(([tag, ops]) => {
         const isCollapsed = collapsed[tag];
         return (
@@ -138,8 +148,9 @@ export const EndpointSidebar: React.FC<EndpointSidebarProps> = ({
                           <MethodLabel method={op.method} />
                           <span
                             className={`truncate font-mono text-[11px] ${active ? "font-semibold" : "text-foreground/80"}`}
+                            title={op.path}
                           >
-                            {op.path}
+                            {displayPath(op.path, pathPrefix)}
                           </span>
                         </button>
                         <Button

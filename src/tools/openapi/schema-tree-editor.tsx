@@ -10,6 +10,7 @@ import {
   fieldToSchema,
   filterFieldCatalog,
   schemaType,
+  uniqueName,
 } from "./openapi-model";
 import { SuggestMenu } from "./suggest-menu";
 import type { OpenAPIDoc, SchemaObject } from "./openapi-types";
@@ -69,7 +70,7 @@ const FieldRow: React.FC<{
   return (
     <div>
       <div
-        className="group/node grid grid-cols-[18px_minmax(120px,1.2fr)_88px_88px_36px_1fr_32px] items-center gap-1 rounded-md border border-transparent px-1 py-1 hover:border-border hover:bg-background"
+        className="group/node grid grid-cols-[18px_minmax(120px,1.2fr)_88px_88px_36px_1fr_32px] items-center gap-1 border-b border-border/70 px-2 py-1.5 hover:bg-background"
         style={{ paddingLeft: 8 + depth * 14 }}
       >
         <button
@@ -222,9 +223,7 @@ const FieldRow: React.FC<{
           <button
             type="button"
             onClick={() => {
-              let field = "field";
-              let i = 1;
-              while (properties[field]) field = `field${i++}`;
+              const field = uniqueName(Object.keys(properties), "field");
               onChange({
                 ...schema,
                 type: "object",
@@ -232,7 +231,7 @@ const FieldRow: React.FC<{
               });
               setOpen(true);
             }}
-            className="mb-1 flex items-center gap-1 rounded-md px-2 py-1 text-[11px] text-muted-foreground hover:bg-background hover:text-foreground"
+            className="mb-1 flex items-center gap-1 rounded-md border border-dashed border-border/80 px-2 py-1.5 text-[11px] text-muted-foreground hover:border-border hover:bg-background hover:text-foreground"
             style={{ marginLeft: 22 + (depth + 1) * 14 }}
           >
             <Plus className="h-3 w-3" />
@@ -275,7 +274,7 @@ export const SchemaTreeEditor: React.FC<SchemaTreeEditorProps> = ({ spec, schema
         <span>Description</span>
         <span />
       </div>
-      <div className="min-h-0 flex-1 overflow-auto bg-muted/15 p-1">
+      <div className="min-h-0 flex-1 overflow-auto bg-muted/15">
         {type !== "object" ? (
           <div className="space-y-2 p-2">
             <p className="text-xs text-muted-foreground">
@@ -296,17 +295,7 @@ export const SchemaTreeEditor: React.FC<SchemaTreeEditorProps> = ({ spec, schema
           </div>
         ) : Object.keys(properties).length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-2 py-10 text-center">
-            <p className="text-xs text-muted-foreground">No fields yet. Add one or pick a name from this spec.</p>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-7 text-xs"
-              type="button"
-              onClick={() => onChange({ ...current, type: "object", properties: { field: { type: "string" } } })}
-            >
-              <Plus className="h-3 w-3 mr-1" />
-              Add field
-            </Button>
+            <p className="text-xs text-muted-foreground">No fields yet. Use Add field, or type a name from this spec.</p>
           </div>
         ) : (
           Object.entries(properties).map(([key, child]) => (
@@ -354,26 +343,28 @@ export const SchemaTreeEditor: React.FC<SchemaTreeEditorProps> = ({ spec, schema
             />
           ))
         )}
-        {type === "object" && Object.keys(properties).length > 0 ? (
-          <button
+      </div>
+      {type === "object" ? (
+        <div className="flex shrink-0 items-center border-t border-border bg-card px-2 py-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 text-xs"
             type="button"
             onClick={() => {
-              let field = "field";
-              let i = 1;
-              while (properties[field]) field = `field${i++}`;
+              const field = uniqueName(Object.keys(properties), "field");
               onChange({
                 ...current,
                 type: "object",
                 properties: { ...properties, [field]: { type: "string" } },
               });
             }}
-            className="m-1 flex items-center gap-1 rounded-md px-2 py-1.5 text-[11px] text-muted-foreground hover:bg-background hover:text-foreground"
           >
-            <Plus className="h-3 w-3" />
+            <Plus className="h-3 w-3 mr-1" />
             Add field
-          </button>
-        ) : null}
-      </div>
+          </Button>
+        </div>
+      ) : null}
     </div>
   );
 };
