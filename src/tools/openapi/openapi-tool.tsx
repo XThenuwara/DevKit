@@ -92,7 +92,7 @@ const Section: React.FC<{ title: string; action?: React.ReactNode; children: Rea
   fill,
 }) => (
   <section className={`rounded-lg border border-border bg-background ${fill ? "flex h-full min-h-0 flex-col" : ""}`}>
-    <header className="flex shrink-0 items-center justify-between gap-2 border-b border-border bg-muted/50 px-3 py-2">
+    <header className="flex shrink-0 items-center justify-between gap-2 border-b border-border/50 bg-background/50 px-3 py-2">
       <h3 className="text-[11px] font-bold uppercase tracking-wider text-foreground">{title}</h3>
       {action}
     </header>
@@ -117,7 +117,7 @@ const RequestEditor: React.FC<{
   const related = collectOperationSchemaNames(spec, path, method);
 
   return (
-    <Tabs value={tab} onValueChange={setTab} className="flex h-full min-h-0 flex-1 flex-col gap-0 overflow-hidden bg-card">
+    <Tabs value={tab} onValueChange={setTab} className="flex h-full min-h-0 flex-1 flex-col gap-0 overflow-hidden bg-background">
       <div className="flex shrink-0 items-center justify-between border-b border-border px-3 py-2">
         <p className="text-xs font-bold">Request</p>
         <TabsList className="h-7">
@@ -698,7 +698,7 @@ export const OpenApiTool: React.FC = () => {
       ) : null}
       {fileInput}
 
-      <aside className="flex w-[280px] shrink-0 flex-col border-r border-border bg-card">
+      <aside className="flex w-[280px] shrink-0 flex-col border-r border-border/50 bg-background">
         <div className="shrink-0 border-b border-border px-3 py-2.5">
           <div className="flex items-center justify-between gap-2">
             <div className="min-w-0">
@@ -812,8 +812,8 @@ export const OpenApiTool: React.FC = () => {
         ) : null}
       </aside>
 
-      <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-muted/20">
-        <header className="flex shrink-0 items-center gap-2 border-b border-border bg-card px-3 py-2">
+      <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background">
+        <header className="flex shrink-0 items-center gap-2 border-b border-border/50 bg-background/50 px-3 py-2">
           {spec && selected ? (
             <>
               <span className={`rounded-md px-2 py-1 text-[11px] font-extrabold uppercase ${METHOD_CHIP[selected.method]}`}>

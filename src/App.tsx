@@ -19,6 +19,7 @@ import {
   Route,
   Terminal,
   ArrowRight,
+  FileText,
 } from "lucide-react";
 
 const GithubIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -53,6 +54,7 @@ import { TimezoneTool } from "@/tools/timezone/timezone-tool";
 import { ImageExtractorTool } from "@/tools/image-extractor/image-extractor-tool";
 import { NonAsciiTool } from "@/tools/non-ascii/non-ascii-tool";
 import { OpenApiTool } from "@/tools/openapi/openapi-tool";
+import { HtmlMarkdownTool } from "@/tools/html-markdown/html-markdown-tool";
 
 // Radix/Shadcn dialog for Command Palette
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -161,6 +163,15 @@ const TOOLS: ToolItem[] = [
     icon: Key,
     component: PasswordTool,
     keywords: ["password", "pwd", "generator", "secure", "random", "entropy"],
+  },
+  {
+    id: "html-markdown",
+    name: "HTML ↔ Markdown",
+    description: "Convert between HTML and Markdown with live preview",
+    category: "converters",
+    icon: FileText,
+    component: HtmlMarkdownTool,
+    keywords: ["html", "markdown", "md", "convert", "turndown", "marked", "rich text", "format"],
   },
   {
     id: "text-pipeline",

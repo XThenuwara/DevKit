@@ -361,7 +361,7 @@ export const SchemaCrumbEditor: React.FC<SchemaCrumbEditorProps> = ({
   // When drilling deeper, subtly lift the background so nested component levels are
   // easier to distinguish in dark themes.
   const depth = path.length;
-  const depthBgClass = depth >= 4 ? "bg-muted/20" : depth >= 2 ? "bg-muted/15" : depth >= 1 ? "bg-muted/10" : "bg-transparent";
+  const depthBgClass = depth >= 1 ? "bg-background/50" : "bg-background";
 
   useEffect(() => {
     if (!pathExists(spec, root, path)) {

@@ -74,7 +74,7 @@ const SchemaBlock: React.FC<{ spec: OpenAPIDoc; schema?: SchemaObject; label: st
   const required = new Set(resolved.required ?? []);
 
   return (
-    <div className="rounded-lg border border-border/70 bg-muted/20 p-3">
+    <div className="rounded-lg border border-border/50 bg-background/50 p-3">
       <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{label}</p>
       <p className="mt-1 font-mono text-xs text-foreground">{describeSchema(spec, schema)}</p>
       {type === "object" && Object.keys(properties).length > 0 ? (
@@ -101,7 +101,7 @@ const ParamsTable: React.FC<{ params: ParameterObject[] }> = ({ params }) => {
   if (params.length === 0) return null;
   return (
     <div className="overflow-hidden rounded-lg border border-border/70">
-      <div className="grid grid-cols-[minmax(100px,1fr)_72px_minmax(88px,0.8fr)_44px_1fr] gap-2 border-b border-border/60 bg-muted/40 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+      <div className="grid grid-cols-[minmax(100px,1fr)_72px_minmax(88px,0.8fr)_44px_1fr] gap-2 border-b border-border/40 bg-background/50 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
         <span>Name</span>
         <span>In</span>
         <span>Type</span>
@@ -252,7 +252,7 @@ export const SwaggerView: React.FC<SwaggerViewProps> = ({ spec, path, method, on
   }, [operations, path, method, single, spec]);
 
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto bg-muted/15">
+    <div className="min-h-0 flex-1 overflow-y-auto bg-background">
       <div className="flex w-full flex-col gap-4 p-4">
         {!single ? (
           <header className="space-y-2 border-b border-border/60 pb-4">
@@ -283,7 +283,7 @@ export const SwaggerView: React.FC<SwaggerViewProps> = ({ spec, path, method, on
         {grouped.map(({ tag, ops }) => (
           <section key={tag} className="space-y-2">
             {!single ? (
-              <h2 className="sticky top-0 z-10 bg-muted/15 py-1 text-sm font-bold text-foreground backdrop-blur-xs">
+              <h2 className="sticky top-0 z-10 bg-background py-1 text-sm font-bold text-foreground backdrop-blur-xs">
                 {tag === "untagged" ? "Endpoints" : tag}
               </h2>
             ) : null}

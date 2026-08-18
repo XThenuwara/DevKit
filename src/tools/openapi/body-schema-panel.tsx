@@ -27,6 +27,7 @@ import {
   collectSchemaNames,
   componentRef,
   contentTypes,
+  collectLinkedSchemaNames,
   emptySchemaForType,
   generateExampleFromSchema,
   inferSchemaFromJson,
@@ -101,39 +102,10 @@ const BodyEditor: React.FC<BodyEditorProps> = ({
     setSchemaTargetName(refInfo?.group === "schemas" ? refInfo.name : null);
   }, [pane, refInfo?.group, refInfo?.name]);
 
-  const linkedSchemaNames = useMemo(() => {
-    const out = new Set<string>();
-    const seen = new Set<string>();
-
-    const walk = (node: SchemaObject | undefined) => {
-      if (!node) return;
-      if (node.$ref) {
-        const parsed = parseComponentRef(node.$ref);
-        if (parsed?.group === "schemas") {
-          out.add(parsed.name);
-          if (!seen.has(parsed.name)) {
-            seen.add(parsed.name);
-            const resolvedModel = spec.components?.schemas?.[parsed.name];
-            walk(resolvedModel);
-          }
-        }
-        return;
-      }
-      if (node.items) walk(node.items);
-      if (node.properties) {
-        for (const child of Object.values(node.properties)) walk(child);
-      }
-      if (node.additionalProperties && typeof node.additionalProperties === "object") {
-        walk(node.additionalProperties as SchemaObject);
-      }
-      for (const union of [node.oneOf, node.anyOf, node.allOf]) {
-        union?.forEach((child) => walk(child));
-      }
-    };
-
-    walk(rawSchema ?? resolved);
-    return [...out].sort((a, b) => a.localeCompare(b));
-  }, [rawSchema, resolved, spec]);
+  const linkedSchemaNames = useMemo(
+    () => collectLinkedSchemaNames(spec, rawSchema),
+    [rawSchema, spec],
+  );
 
   const schemaForTarget = schemaTargetName
     ? spec.components?.schemas?.[schemaTargetName] ?? resolved
@@ -315,13 +287,13 @@ const BodyEditor: React.FC<BodyEditorProps> = ({
             </div>
 
             {linkedSchemaNames.length > 0 ? (
-              <aside className="w-[240px] shrink-0 border-l border-border/50 bg-background/30 flex min-h-0 flex-col">
-                <div className="shrink-0 border-b border-border/60 px-3 py-2">
+              <aside className="flex min-h-0 w-[240px] shrink-0 flex-col border-l border-border/50 bg-background/50">
+                <div className="shrink-0 border-b border-border/40 px-3 py-2">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                     Linked schemas
                   </p>
                 </div>
-                <div className="min-h-0 flex-1 overflow-auto p-2 space-y-1.5">
+                <div className="min-h-0 flex-1 space-y-1.5 overflow-auto p-2">
                   {linkedSchemaNames.map((name) => {
                     const active = schemaTargetName === name;
                     return (
@@ -330,8 +302,8 @@ const BodyEditor: React.FC<BodyEditorProps> = ({
                         type="button"
                         className={`w-full rounded-md border px-2 py-1 text-left text-xs font-mono ${
                           active
-                            ? "bg-muted/50 border-border"
-                            : "bg-background/0 border-transparent hover:bg-muted/20 hover:border-border/60"
+                            ? "border-border bg-background text-foreground"
+                            : "border-transparent bg-transparent hover:border-border/50 hover:bg-background/80"
                         }`}
                         onClick={() => setSchemaTargetName(name)}
                       >

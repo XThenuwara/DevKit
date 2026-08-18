@@ -1,4 +1,4 @@
-export type ThemePalette = "stone" | "claude" | "claude-twilight" | "claude-dusk";
+export type ThemePalette = "stone" | "claude" | "claude-twilight" | "claude-midnight" | "claude-dusk";
 export type ThemeMode = "light" | "dark" | "system";
 export type ResolvedMode = "light" | "dark";
 
@@ -48,6 +48,15 @@ export const PALETTES: PaletteOption[] = [
     },
   },
   {
+    id: "claude-midnight",
+    name: "Claude Midnight",
+    description: "Deeper charcoal — layered surfaces use background tints like Swagger.",
+    preview: {
+      light: { bg: "#f5f4ed", card: "#faf9f5", accent: "#c96442", ink: "#141413" },
+      dark: { bg: "#1a1816", card: "#1a1816", accent: "#d97757", ink: "#f0ebe3" },
+    },
+  },
+  {
     id: "claude-dusk",
     name: "Claude Dusk",
     description: "Lifted charcoal dark with stronger borders and contrast.",
@@ -59,7 +68,7 @@ export const PALETTES: PaletteOption[] = [
 ];
 
 export const isPalette = (value: string | null): value is ThemePalette =>
-  value === "stone" || value === "claude" || value === "claude-twilight" || value === "claude-dusk";
+  value === "stone" || value === "claude" || value === "claude-twilight" || value === "claude-midnight" || value === "claude-dusk";
 
 export const isMode = (value: string | null): value is ThemeMode =>
   value === "light" || value === "dark" || value === "system";
