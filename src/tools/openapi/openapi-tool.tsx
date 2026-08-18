@@ -119,7 +119,7 @@ const RequestEditor: React.FC<{
           </TabsList>
         </Tabs>
       </div>
-      <div className={`flex-1 min-h-0 p-3 ${tab === "params" || tab === "body" ? "flex flex-col overflow-hidden" : "overflow-y-auto space-y-3"}`}>
+      <div className={`flex-1 min-h-0 ${tab === "params" || tab === "body" ? "flex flex-col overflow-hidden" : "overflow-y-auto space-y-3 p-3"}`}>
         {tab === "params" && (
           <ParametersPanel
             spec={spec}

@@ -11,6 +11,7 @@ import { FullscreenModal } from "./fullscreen-modal";
 import { SchemaTreeEditor } from "./schema-tree-editor";
 import {
   COMMON_MEDIA_TYPES,
+  collectSchemaNames,
   componentRef,
   contentTypes,
   emptySchemaForType,
@@ -55,7 +56,7 @@ const BodyEditor: React.FC<BodyEditorProps> = ({
   layout,
   onExpand,
 }) => {
-  const [jsonView, setJsonView] = useState<"example" | "schema">("example");
+  const [pane, setPane] = useState<"fields" | "example" | "schema">("fields");
   const [extractName, setExtractName] = useState("");
   const [exampleDraft, setExampleDraft] = useState("");
   const [exampleDirty, setExampleDirty] = useState(false);
@@ -65,6 +66,7 @@ const BodyEditor: React.FC<BodyEditorProps> = ({
   const activeType = types.includes(contentType) ? contentType : types[0] || "application/json";
   const rawSchema = content?.[activeType]?.schema;
   const refInfo = rawSchema?.$ref ? parseComponentRef(rawSchema.$ref) : null;
+  const schemaNames = useMemo(() => collectSchemaNames(spec), [spec]);
   const resolved = useMemo(() => {
     if (!rawSchema) return { type: "object", properties: {} } satisfies SchemaObject;
     if (isRef(rawSchema)) return resolveRef<SchemaObject>(spec, rawSchema) ?? { type: "object", properties: {} };
@@ -114,6 +116,7 @@ const BodyEditor: React.FC<BodyEditorProps> = ({
       type: "object",
       properties: { ...properties, [name]: { type: "string" } },
     });
+    setPane("fields");
   };
 
   const inferFromExample = () => {
@@ -133,6 +136,7 @@ const BodyEditor: React.FC<BodyEditorProps> = ({
         });
       }
       setExampleDirty(false);
+      setPane("fields");
     } catch {
       /* invalid json */
     }
@@ -153,7 +157,7 @@ const BodyEditor: React.FC<BodyEditorProps> = ({
 
   if (!content || types.length === 0) {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-card py-10 text-center">
+      <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
         <p className="text-sm font-semibold">No body defined</p>
         <p className="max-w-sm text-xs text-muted-foreground">{emptyLabel}</p>
         <Button
@@ -171,77 +175,38 @@ const BodyEditor: React.FC<BodyEditorProps> = ({
   }
 
   const fieldsPane = (
-    <div className="relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden bg-card">
-      <div className="flex shrink-0 items-center gap-2 border-b border-border bg-muted/40 px-3 py-2">
-        <div className="min-w-0 flex-1">
-          <p className="text-[11px] font-bold uppercase tracking-wider">Fields</p>
-          <p className="truncate text-[10px] text-muted-foreground">
-            {refInfo ? `Editing shared schema ${refInfo.name}` : "Name, type, and required for this body"}
-          </p>
-        </div>
-        <Select
-          value={ROOT_TYPES.includes(rootType as (typeof ROOT_TYPES)[number]) ? rootType : "object"}
-          onValueChange={(value) => commitSchema(emptySchemaForType(value))}
-        >
-          <SelectTrigger className="h-7 w-[108px] bg-background text-[11px]">
-            <SelectValue placeholder="Type" />
-          </SelectTrigger>
-          <SelectContent>
-            {ROOT_TYPES.map((item) => (
-              <SelectItem key={item} value={item}>
-                {item}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Button variant="outline" size="sm" className="h-7 text-xs" type="button" onClick={addField}>
-          <Plus className="h-3 w-3 mr-1" />
-          Add field
-        </Button>
-      </div>
-      <div className="min-h-0 flex-1">
-        <SchemaTreeEditor spec={spec} schema={resolved} onChange={commitSchema} />
-      </div>
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <SchemaTreeEditor spec={spec} schema={resolved} onChange={commitSchema} onSpecChange={onSpecChange} />
     </div>
   );
 
-  const jsonPane = (
-    <div className="relative z-0 flex min-h-0 min-w-0 flex-col overflow-hidden bg-background">
-      <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border bg-muted/40 px-3 py-2">
-        <Tabs value={jsonView} onValueChange={(value) => setJsonView(value as "example" | "schema")}>
-          <TabsList className="h-7">
-            <TabsTrigger value="example" className="h-6 px-2 text-[11px]">
-              Example
-            </TabsTrigger>
-            <TabsTrigger value="schema" className="h-6 px-2 text-[11px]">
-              Schema JSON
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
+  const jsonPane = (view: "example" | "schema") => (
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <div className="flex shrink-0 items-center justify-between gap-2 px-3 py-1.5">
+        <p className="text-[10px] text-muted-foreground">
+          {view === "schema" && refInfo
+            ? `Resolved schema ${refInfo.name}`
+            : view === "example"
+              ? "Request/response example JSON"
+              : "Schema JSON"}
+        </p>
         <div className="flex items-center gap-1">
-          {jsonView === "example" ? (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-6 px-2 text-[10px]"
-              type="button"
-              onClick={inferFromExample}
-              title="Build fields from the example JSON"
-            >
+          {view === "example" ? (
+            <Button variant="ghost" size="sm" className="h-6 px-2 text-[10px]" type="button" onClick={inferFromExample}>
               <Sparkles className="h-3 w-3 mr-1" />
               Infer fields
             </Button>
           ) : null}
-          {jsonView === "example" && exampleDirty ? (
+          {view === "example" && exampleDirty ? (
             <Button size="sm" className="h-6 px-2 text-[10px]" type="button" onClick={applyExample}>
               Save example
             </Button>
           ) : null}
-          <CopyButton value={jsonView === "example" ? exampleDraft : schemaDraft} className="h-6 w-6" />
+          <CopyButton value={view === "example" ? exampleDraft : schemaDraft} className="h-6 w-6" />
         </div>
       </div>
       <div className="min-h-0 flex-1">
-        {jsonView === "example" ? (
+        {view === "example" ? (
           <CodeEditor
             value={exampleDraft}
             onChange={(value) => {
@@ -273,8 +238,8 @@ const BodyEditor: React.FC<BodyEditorProps> = ({
   );
 
   return (
-    <section className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-border bg-muted/30 shadow-sm">
-      <header className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border bg-card px-3 py-2">
+    <section className="flex h-full min-h-0 flex-col overflow-hidden">
+      <header className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border/60 px-3 py-2">
         {layout === "compact" ? (
           <h3 className="text-[11px] font-bold uppercase tracking-wider text-foreground">{title}</h3>
         ) : null}
@@ -294,7 +259,7 @@ const BodyEditor: React.FC<BodyEditorProps> = ({
             setContentType(nextType);
           }}
         >
-          <SelectTrigger className="h-7 w-[210px] bg-background font-mono text-[11px]">
+          <SelectTrigger className="h-7 w-[188px] bg-transparent font-mono text-[11px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -306,14 +271,34 @@ const BodyEditor: React.FC<BodyEditorProps> = ({
           </SelectContent>
         </Select>
         {refInfo ? (
-          <div className="flex items-center gap-1.5 rounded-md border border-sky-500/20 bg-sky-500/10 px-2 py-1 text-[11px] text-sky-800 dark:text-sky-300">
-            <Link2 className="h-3 w-3" />
-            <span className="font-semibold">#{refInfo.name}</span>
+          <div className="flex items-center gap-1">
+            <Link2 className="h-3.5 w-3.5 text-sky-700 dark:text-sky-300" />
+            <Select
+              value={refInfo.name}
+              onValueChange={(name) =>
+                onChange({
+                  ...content,
+                  [activeType]: { ...content[activeType], schema: { $ref: componentRef("schemas", name) } },
+                })
+              }
+            >
+              <SelectTrigger className="h-7 w-[140px] bg-sky-500/10 text-[11px] font-semibold text-sky-800 dark:text-sky-300">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {schemaNames.map((name) => (
+                  <SelectItem key={name} value={name}>
+                    {name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Button
               variant="ghost"
               size="sm"
               className="h-6 px-1.5 text-[10px]"
               type="button"
+              title="Copy schema inline"
               onClick={() =>
                 onChange({
                   ...content,
@@ -326,15 +311,15 @@ const BodyEditor: React.FC<BodyEditorProps> = ({
             </Button>
           </div>
         ) : (
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1">
             <Input
               value={extractName}
               onChange={(e) => setExtractName(e.target.value)}
               placeholder="Save as schema…"
-              className="h-7 w-[140px] text-xs bg-background"
+              className="h-7 w-[132px] text-xs bg-transparent"
             />
             <Button
-              variant="outline"
+              variant="ghost"
               size="sm"
               className="h-7 text-xs"
               type="button"
@@ -353,25 +338,73 @@ const BodyEditor: React.FC<BodyEditorProps> = ({
             </Button>
           </div>
         )}
+        {layout === "compact" ? (
+          <Tabs value={pane} onValueChange={(value) => setPane(value as typeof pane)}>
+            <TabsList className="h-7">
+              <TabsTrigger value="fields" className="h-6 px-2 text-[11px]">
+                Fields
+              </TabsTrigger>
+              <TabsTrigger value="example" className="h-6 px-2 text-[11px]">
+                Example
+              </TabsTrigger>
+              <TabsTrigger value="schema" className="h-6 px-2 text-[11px]">
+                Schema
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        ) : null}
+        <Select
+          value={ROOT_TYPES.includes(rootType as (typeof ROOT_TYPES)[number]) ? rootType : "object"}
+          onValueChange={(value) => commitSchema(emptySchemaForType(value))}
+        >
+          <SelectTrigger className="h-7 w-[100px] bg-transparent text-[11px]">
+            <SelectValue placeholder="Type" />
+          </SelectTrigger>
+          <SelectContent>
+            {ROOT_TYPES.map((item) => (
+              <SelectItem key={item} value={item}>
+                {item}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button variant="ghost" size="sm" className="h-7 text-xs" type="button" onClick={addField}>
+          <Plus className="h-3 w-3 mr-1" />
+          Add field
+        </Button>
         {onExpand ? (
           <Button variant="ghost" size="sm" className="ml-auto h-6 px-2 text-[11px]" type="button" onClick={onExpand}>
             <Maximize2 className="h-3 w-3 mr-1" />
             Expand
           </Button>
-        ) : null}
+        ) : (
+          <span className="ml-auto" />
+        )}
       </header>
-      <div
-        className={
-          layout === "wide"
-            ? "grid min-h-0 flex-1 grid-cols-1 divide-x divide-border lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]"
-            : "flex min-h-0 flex-1 flex-col divide-y divide-border"
-        }
-      >
-        {fieldsPane}
-        <div className={layout === "wide" ? "flex min-h-0 min-w-0 flex-col" : "flex min-h-[170px] flex-[0.85] flex-col"}>
-          {jsonPane}
+      {layout === "compact" ? (
+        <div className="min-h-0 flex-1">
+          {pane === "fields" ? fieldsPane : jsonPane(pane)}
         </div>
-      </div>
+      ) : (
+        <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
+          {fieldsPane}
+          <div className="flex min-h-0 min-w-0 flex-col border-l border-border/50">
+            <div className="flex shrink-0 items-center px-3 pt-2">
+              <Tabs value={pane === "fields" ? "example" : pane} onValueChange={(value) => setPane(value as typeof pane)}>
+                <TabsList className="h-7">
+                  <TabsTrigger value="example" className="h-6 px-2 text-[11px]">
+                    Example
+                  </TabsTrigger>
+                  <TabsTrigger value="schema" className="h-6 px-2 text-[11px]">
+                    Schema
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
+            {jsonPane(pane === "schema" ? "schema" : "example")}
+          </div>
+        </div>
+      )}
     </section>
   );
 };
@@ -385,7 +418,7 @@ export const BodySchemaPanel: React.FC<BodySchemaPanelProps> = (props) => {
       {!fullscreen ? (
         <BodyEditor {...props} layout="compact" onExpand={() => setFullscreen(true)} />
       ) : (
-        <p className="text-xs text-muted-foreground">Editing in fullscreen…</p>
+        <p className="px-3 py-2 text-xs text-muted-foreground">Editing in fullscreen…</p>
       )}
       <FullscreenModal title={title} open={fullscreen} onOpenChange={setFullscreen} showTrigger={false}>
         <BodyEditor {...props} layout="wide" />

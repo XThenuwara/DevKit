@@ -25,6 +25,9 @@ const PARAM_FORMATS: Record<string, string[]> = {
   number: ["", "float", "double"],
 };
 
+const CELL =
+  "h-7 bg-transparent border-transparent shadow-none hover:bg-background hover:border-input focus-visible:bg-background";
+
 const IN_TONE: Record<ParameterObject["in"], string> = {
   path: "bg-amber-500/15 text-amber-800 dark:text-amber-300",
   query: "bg-sky-500/15 text-sky-800 dark:text-sky-300",
@@ -115,7 +118,7 @@ export const ParametersTable: React.FC<ParametersTableProps> = ({
 
   if (rows.length === 0) {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-background/80">
+      <div className="flex h-full flex-col items-center justify-center gap-3">
         <p className="text-xs text-muted-foreground">No parameters yet. Add a field or reuse one from this spec.</p>
         <div className="flex flex-wrap items-center justify-center gap-1.5">
           <Button variant="outline" size="sm" className="h-7 text-xs" type="button" onClick={() => onAdd("path")}>
@@ -136,8 +139,8 @@ export const ParametersTable: React.FC<ParametersTableProps> = ({
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-border bg-background shadow-sm">
-      <div className="grid min-w-[720px] shrink-0 grid-cols-[1fr_80px_88px_88px_44px_1fr_72px_32px] gap-0 border-b border-border bg-muted px-2 py-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden">
+      <div className="grid min-w-[720px] shrink-0 grid-cols-[1fr_80px_88px_88px_44px_1fr_72px_32px] gap-0 border-b border-border/60 px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
         <span>Name</span>
         <span>In</span>
         <span>Type</span>
@@ -147,7 +150,7 @@ export const ParametersTable: React.FC<ParametersTableProps> = ({
         <span>Example</span>
         <span />
       </div>
-      <div className="min-h-0 flex-1 overflow-auto bg-muted/20">
+      <div className="min-h-0 flex-1 overflow-auto">
         {rows.map((row, visualIndex) => {
           const { param } = row;
           const schema = param.schema ?? { type: "string" };
@@ -163,8 +166,8 @@ export const ParametersTable: React.FC<ParametersTableProps> = ({
           return (
             <div
               key={rowKey}
-              className={`grid min-w-[720px] grid-cols-[1fr_80px_88px_88px_44px_1fr_72px_32px] items-center gap-1 border-b border-border/70 px-2 py-1.5 ${
-                visualIndex % 2 === 0 ? "bg-card" : "bg-muted/40"
+              className={`grid min-w-[720px] grid-cols-[1fr_80px_88px_88px_44px_1fr_72px_32px] items-center gap-1 border-b border-border/40 px-2 py-1 ${
+                visualIndex % 2 === 0 ? "bg-transparent" : "bg-muted/25"
               }`}
             >
               <div className="relative">
@@ -185,7 +188,7 @@ export const ParametersTable: React.FC<ParametersTableProps> = ({
                     setActiveName(rowKey);
                     setAnchor(e.currentTarget);
                   }}
-                  className="h-7 text-xs font-mono bg-background"
+                  className={`${CELL} text-xs font-mono`}
                   placeholder="name"
                 />
                 <SuggestMenu
@@ -226,7 +229,7 @@ export const ParametersTable: React.FC<ParametersTableProps> = ({
                   });
                 }}
               >
-                <SelectTrigger className={`h-7 text-[11px] font-semibold ${IN_TONE[param.in]}`}>
+                <SelectTrigger className={`h-7 text-[11px] font-semibold border-transparent ${IN_TONE[param.in]}`}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -246,7 +249,7 @@ export const ParametersTable: React.FC<ParametersTableProps> = ({
                   })
                 }
               >
-                <SelectTrigger className="h-7 text-[11px] bg-background">
+                <SelectTrigger className={`${CELL} text-[11px]`}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -267,7 +270,7 @@ export const ParametersTable: React.FC<ParametersTableProps> = ({
                 }
                 disabled={!PARAM_FORMATS[type]}
               >
-                <SelectTrigger className="h-7 text-[11px] bg-background">
+                <SelectTrigger className={`${CELL} text-[11px]`}>
                   <SelectValue placeholder="—" />
                 </SelectTrigger>
                 <SelectContent>
@@ -288,7 +291,7 @@ export const ParametersTable: React.FC<ParametersTableProps> = ({
               <Input
                 value={param.description ?? ""}
                 onChange={(e) => patch(row, { ...param, description: e.target.value })}
-                className="h-7 text-xs bg-background"
+                className={`${CELL} text-xs`}
                 placeholder="Description"
               />
               <Input
@@ -304,7 +307,7 @@ export const ParametersTable: React.FC<ParametersTableProps> = ({
                     schema: { ...schema, example: raw ? example : undefined },
                   });
                 }}
-                className="h-7 text-xs font-mono bg-background"
+                className={`${CELL} text-xs font-mono`}
                 placeholder="ex"
               />
               <Button
@@ -319,7 +322,7 @@ export const ParametersTable: React.FC<ParametersTableProps> = ({
             </div>
           );
         })}
-        <div className="sticky bottom-0 flex items-center gap-1.5 border-t border-border bg-card px-2 py-2">
+        <div className="sticky bottom-0 flex items-center gap-1.5 bg-background/90 px-2 py-1.5 backdrop-blur-xs">
           <Button variant="outline" size="sm" className="h-7 text-xs" type="button" onClick={() => onAdd("query")}>
             <Plus className="h-3 w-3 mr-1" />
             Add field
@@ -416,8 +419,8 @@ export const ParametersPanel: React.FC<{
   );
 
   return (
-    <section className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-border bg-muted/30 shadow-sm">
-      <header className="flex shrink-0 items-center justify-between gap-2 border-b border-border bg-card px-3 py-2">
+    <section className="flex h-full min-h-0 flex-col overflow-hidden">
+      <header className="flex shrink-0 items-center justify-between gap-2 border-b border-border/60 px-3 py-2">
         <h3 className="text-[11px] font-bold uppercase tracking-wider text-foreground">Parameters</h3>
         <div className="flex items-center gap-1">
           {renderAddToolbar()}
@@ -432,7 +435,7 @@ export const ParametersPanel: React.FC<{
           </FullscreenModal>
         </div>
       </header>
-      <div className="min-h-0 flex-1 p-3">
+      <div className="min-h-0 flex-1">
         <ParametersTable {...props} onAdd={add} />
       </div>
     </section>
