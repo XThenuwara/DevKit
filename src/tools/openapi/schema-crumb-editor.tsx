@@ -188,7 +188,7 @@ const FieldRow: React.FC<FieldRowProps> = ({
   return (
     <ContextMenu>
       <ContextMenuTrigger asChild>
-        <div className={`${GRID} px-2 py-1 hover:bg-muted/40`}>
+        <div className={`${GRID} px-2 py-1 hover:bg-background/50`}>
           <button
             type="button"
             className="flex h-7 w-[18px] items-center justify-center text-muted-foreground disabled:opacity-30"
@@ -414,7 +414,7 @@ export const SchemaCrumbEditor: React.FC<SchemaCrumbEditorProps> = ({
 
   return (
     <div className={`flex min-h-0 flex-1 flex-col overflow-hidden ${depthBgClass}`}>
-      <div className="flex shrink-0 items-center gap-1 overflow-x-auto border-b border-border/60 px-2 py-1.5">
+      <div className="flex shrink-0 items-center gap-1 overflow-x-auto border-b border-border/50 px-2 py-1.5">
         {crumbs.map((crumb, index) => (
           <React.Fragment key={`${crumb.label}-${index}`}>
             {index > 0 ? <ChevronRight className="h-3 w-3 shrink-0 text-muted-foreground" /> : null}
@@ -464,7 +464,7 @@ export const SchemaCrumbEditor: React.FC<SchemaCrumbEditorProps> = ({
         </div>
       ) : (
         <>
-          <div className={`${GRID} shrink-0 border-b border-border/60 px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground`}>
+          <div className={`${GRID} shrink-0 border-b border-border/50 px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground`}>
             <span />
             <span>Field</span>
             <span>Type</span>
@@ -543,7 +543,7 @@ export const SchemaCrumbEditor: React.FC<SchemaCrumbEditorProps> = ({
             )}
           </div>
           {resolvedType === "object" ? (
-            <div className="flex shrink-0 items-center border-t border-border/60 px-2 py-1.5">
+            <div className="flex shrink-0 items-center border-t border-border/50 px-2 py-1.5">
               <Button
                 variant="ghost"
                 size="sm"

@@ -155,7 +155,7 @@ export const ParametersTable: React.FC<ParametersTableProps> = ({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      <div className="grid min-w-[720px] shrink-0 grid-cols-[1fr_80px_88px_88px_44px_1fr_72px] gap-0 border-b border-border/60 px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+      <div className="grid min-w-[720px] shrink-0 grid-cols-[1fr_80px_88px_88px_44px_1fr_72px] gap-0 border-b border-border/50 px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
         <span>Name</span>
         <span>In</span>
         <span>Type</span>
@@ -182,7 +182,7 @@ export const ParametersTable: React.FC<ParametersTableProps> = ({
               <ContextMenuTrigger asChild>
                 <div
                   className={`grid min-w-[720px] grid-cols-[1fr_80px_88px_88px_44px_1fr_72px] items-center gap-1 border-b border-border/40 px-2 py-1 ${
-                    visualIndex % 2 === 0 ? "bg-transparent" : "bg-muted/25"
+                    visualIndex % 2 === 0 ? "bg-transparent" : "bg-background/50"
                   }`}
                 >
               <div className="relative">
@@ -341,7 +341,7 @@ export const ParametersTable: React.FC<ParametersTableProps> = ({
           );
         })}
       </div>
-      <div className="flex shrink-0 items-center border-t border-border/60 px-2 py-1.5">
+      <div className="flex shrink-0 items-center border-t border-border/50 px-2 py-1.5">
         <Button variant="ghost" size="sm" className="h-7 text-xs" type="button" onClick={() => onAdd("query")}>
           <Plus className="h-3 w-3 mr-1" />
           Add field
@@ -433,7 +433,7 @@ export const ParametersPanel: React.FC<{
 
   return (
     <section className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      <header className="flex shrink-0 items-center justify-between gap-2 border-b border-border/60 px-3 py-2">
+      <header className="flex shrink-0 items-center justify-between gap-2 border-b border-border/50 px-3 py-2">
         <h3 className="text-[11px] font-bold uppercase tracking-wider text-foreground">Parameters</h3>
         <div className="flex items-center gap-1">
           {renderAddToolbar(true)}

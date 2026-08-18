@@ -48,9 +48,9 @@ export const FullscreenModal: React.FC<FullscreenModalProps> = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         showCloseButton={false}
-        className="fixed inset-3 top-3 left-3 flex h-[calc(100vh-1.5rem)] w-[calc(100vw-1.5rem)] max-w-none sm:max-w-none translate-x-0 translate-y-0 flex-col gap-0 overflow-hidden rounded-2xl border border-border bg-background p-0 shadow-2xl ring-1 ring-foreground/10"
+        className="fixed inset-3 top-3 left-3 flex h-[calc(100vh-1.5rem)] w-[calc(100vw-1.5rem)] max-w-none sm:max-w-none translate-x-0 translate-y-0 flex-col gap-0 overflow-hidden rounded-2xl border border-border/50 bg-background p-0 shadow-2xl"
       >
-        <DialogHeader className="shrink-0 flex-row items-center justify-between border-b border-border bg-card px-4 py-3 space-y-0">
+        <DialogHeader className="shrink-0 flex-row items-center justify-between border-b border-border/50 bg-background/50 px-4 py-3 space-y-0">
           <DialogTitle className="text-sm font-semibold">{title}</DialogTitle>
           <div className="flex items-center gap-2">
             {headerAction}
@@ -59,7 +59,7 @@ export const FullscreenModal: React.FC<FullscreenModalProps> = ({
             </Button>
           </div>
         </DialogHeader>
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-muted/40 p-4">{children}</div>
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-background p-4">{children}</div>
       </DialogContent>
     </Dialog>
   </>

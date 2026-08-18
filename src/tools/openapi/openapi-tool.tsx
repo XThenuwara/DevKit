@@ -91,7 +91,7 @@ const Section: React.FC<{ title: string; action?: React.ReactNode; children: Rea
   children,
   fill,
 }) => (
-  <section className={`rounded-lg border border-border bg-background ${fill ? "flex h-full min-h-0 flex-col" : ""}`}>
+  <section className={`rounded-lg border border-border/50 bg-background ${fill ? "flex h-full min-h-0 flex-col" : ""}`}>
     <header className="flex shrink-0 items-center justify-between gap-2 border-b border-border/50 bg-background/50 px-3 py-2">
       <h3 className="text-[11px] font-bold uppercase tracking-wider text-foreground">{title}</h3>
       {action}
@@ -118,7 +118,7 @@ const RequestEditor: React.FC<{
 
   return (
     <Tabs value={tab} onValueChange={setTab} className="flex h-full min-h-0 flex-1 flex-col gap-0 overflow-hidden bg-background">
-      <div className="flex shrink-0 items-center justify-between border-b border-border px-3 py-2">
+      <div className="flex shrink-0 items-center justify-between border-b border-border/50 px-3 py-2">
         <p className="text-xs font-bold">Request</p>
         <TabsList className="h-7">
           <TabsTrigger value="params" className="h-6 px-2.5 text-[11px]">Params</TabsTrigger>
@@ -238,7 +238,7 @@ const RequestEditor: React.FC<{
                   <div className="flex flex-col gap-3 pt-1">
                     <FieldLabel>Linked schemas</FieldLabel>
                     {related.map((name) => (
-                      <div key={name} className="flex h-[320px] min-h-[240px] flex-col overflow-hidden rounded-lg border border-border bg-background">
+                      <div key={name} className="flex h-[320px] min-h-[240px] flex-col overflow-hidden rounded-lg border border-border/50 bg-background/50">
                         <SchemaCrumbEditor
                           spec={spec}
                           schema={{ $ref: componentRef("schemas", name) }}
@@ -295,8 +295,8 @@ const ResponseEditor: React.FC<{
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-card border-l border-border">
-      <header className="flex shrink-0 items-center gap-2 border-b border-border px-3 py-2">
+    <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-background border-l border-border/50">
+      <header className="flex shrink-0 items-center gap-2 border-b border-border/50 bg-background/50 px-3 py-2">
         <p className="text-xs font-bold">Response</p>
         <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
           {codes.length === 0 ? (
@@ -346,7 +346,7 @@ const ResponseEditor: React.FC<{
       </header>
       {currentCode && response ? (
         <>
-          <div className="flex shrink-0 items-center gap-2 border-b border-border/60 px-3 py-1.5">
+          <div className="flex shrink-0 items-center gap-2 border-b border-border/50 px-3 py-1.5">
             <FieldLabel>Description</FieldLabel>
             <Input
               value={response.description ?? ""}
@@ -390,8 +390,8 @@ const SpecOverview: React.FC<{
   const schemaNames = collectSchemaNames(spec);
 
   return (
-    <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-card">
-      <div className="shrink-0 flex items-center justify-between border-b border-border px-3 py-2">
+    <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-background">
+      <div className="shrink-0 flex items-center justify-between border-b border-border/50 bg-background/50 px-3 py-2">
         <p className="text-xs font-bold">Collection overview</p>
         <Tabs value={mode} onValueChange={(value) => setMode(value as "visual" | "swagger" | "source")}>
           <TabsList className="h-7">
@@ -459,7 +459,7 @@ const SpecOverview: React.FC<{
                 ["Endpoints", String(operationsCount)],
                 ["Schemas", String(schemaNames.length)],
               ].map(([label, value]) => (
-                <span key={label} className="rounded-md border border-border bg-muted px-2 py-1 text-[11px] font-semibold">
+                <span key={label} className="rounded-md border border-border/50 bg-background/50 px-2 py-1 text-[11px] font-semibold">
                   {label}: {value}
                 </span>
               ))}
@@ -521,7 +521,7 @@ const SpecOverview: React.FC<{
               <p className="text-xs text-muted-foreground">None yet. Save a body as $ref from an endpoint.</p>
             ) : (
               schemaNames.map((name) => (
-                <div key={name} className="flex h-[280px] min-h-[220px] flex-col overflow-hidden rounded-md border border-border bg-background">
+                <div key={name} className="flex h-[280px] min-h-[220px] flex-col overflow-hidden rounded-md border border-border/50 bg-background/50">
                   <SchemaCrumbEditor
                     spec={spec}
                     schema={{ $ref: componentRef("schemas", name) }}
@@ -686,10 +686,10 @@ export const OpenApiTool: React.FC = () => {
   );
 
   return (
-    <div className="relative flex h-full w-full min-h-0 overflow-hidden rounded-xl border border-border bg-background">
+    <div className="relative flex h-full w-full min-h-0 overflow-hidden rounded-xl border border-border/50 bg-background">
       {dragOver ? (
         <div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
-          <div className="flex flex-col items-center gap-2 rounded-2xl border-2 border-dashed border-primary bg-card px-10 py-8 shadow-xl">
+          <div className="flex flex-col items-center gap-2 rounded-2xl border-2 border-dashed border-primary bg-background px-10 py-8">
             <Upload className="h-8 w-8 text-primary" />
             <p className="text-sm font-bold">Drop OpenAPI file to open</p>
             <p className="text-xs text-muted-foreground">JSON or YAML · 3.0 / 3.1</p>
@@ -699,7 +699,7 @@ export const OpenApiTool: React.FC = () => {
       {fileInput}
 
       <aside className="flex w-[280px] shrink-0 flex-col border-r border-border/50 bg-background">
-        <div className="shrink-0 border-b border-border px-3 py-2.5">
+        <div className="shrink-0 border-b border-border/50 px-3 py-2.5">
           <div className="flex items-center justify-between gap-2">
             <div className="min-w-0">
               <p className="truncate text-xs font-bold">{spec?.info.title || "OpenAPI"}</p>
@@ -733,8 +733,8 @@ export const OpenApiTool: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setSelected(null)}
-                className={`flex w-full items-center gap-2 border-b border-border px-3 py-2 text-left text-xs ${
-                  !selected ? "bg-muted font-semibold" : "hover:bg-muted/50"
+                className={`flex w-full items-center gap-2 border-b border-border/50 px-3 py-2 text-left text-xs ${
+                  !selected ? "bg-background/50 font-semibold" : "hover:bg-background/50"
                 }`}
               >
                 <FolderOpen className="h-3.5 w-3.5 text-muted-foreground" />
@@ -753,7 +753,7 @@ export const OpenApiTool: React.FC = () => {
         </div>
 
         {spec ? (
-          <div className="shrink-0 border-t border-border p-2 space-y-1.5 bg-muted/30">
+          <div className="shrink-0 border-t border-border/50 p-2 space-y-1.5 bg-background/50">
             <div className="flex items-center gap-1">
               <Select value={newMethod} onValueChange={(value) => setNewMethod(value as HttpMethod)}>
                 <SelectTrigger className="h-7 w-[78px] text-[11px] uppercase bg-background">
@@ -819,7 +819,7 @@ export const OpenApiTool: React.FC = () => {
               <span className={`rounded-md px-2 py-1 text-[11px] font-extrabold uppercase ${METHOD_CHIP[selected.method]}`}>
                 {selected.method}
               </span>
-              <div className="flex min-w-0 flex-1 items-center gap-2 rounded-md border border-border bg-background px-2 py-1.5">
+              <div className="flex min-w-0 flex-1 items-center gap-2 rounded-md border border-border/50 bg-background px-2 py-1.5">
                 <Input
                   value={pathDraft}
                   onChange={(e) => setPathDraft(e.target.value)}
@@ -921,7 +921,7 @@ export const OpenApiTool: React.FC = () => {
         <div className="flex min-h-0 flex-1 overflow-hidden">
           {!spec ? (
             <div className="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-center">
-              <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-dashed border-border bg-card">
+              <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-dashed border-border/50 bg-background/50">
                 <Upload className="h-7 w-7 text-muted-foreground" />
               </div>
               <div className="space-y-1">
@@ -934,7 +934,7 @@ export const OpenApiTool: React.FC = () => {
                 value={sourceText}
                 onChange={(e) => setSourceText(e.target.value)}
                 placeholder={'openapi: "3.1.0"\ninfo:\n  title: My API\n  version: 1.0.0'}
-                className="h-40 w-full max-w-xl resize-none rounded-lg border border-border bg-card p-3 font-mono text-xs"
+                className="h-40 w-full max-w-xl resize-none rounded-lg border border-border/50 bg-background/50 p-3 font-mono text-xs"
               />
               <Button size="sm" className="h-8 text-xs" type="button" onClick={() => loadText(sourceText)} disabled={!sourceText.trim()}>
                 Parse document

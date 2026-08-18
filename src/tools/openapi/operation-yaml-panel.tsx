@@ -26,7 +26,7 @@ export const OperationYamlPanel: React.FC<{
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
-      <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border/60 px-3 py-2">
+      <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border/50 px-3 py-2">
         <div className="min-w-0">
           <p className="text-[11px] font-bold uppercase tracking-wider">Source</p>
           <p className="truncate text-[10px] text-muted-foreground">

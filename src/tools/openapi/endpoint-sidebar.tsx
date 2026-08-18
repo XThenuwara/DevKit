@@ -83,7 +83,7 @@ export const EndpointSidebar: React.FC<EndpointSidebarProps> = ({
   return (
     <>
       {pathPrefix ? (
-        <div className="border-b border-border px-3 py-1.5 text-[10px] text-muted-foreground">
+        <div className="border-b border-border/50 px-3 py-1.5 text-[10px] text-muted-foreground">
           Base <span className="font-mono font-semibold text-foreground/80">{pathPrefix}</span>
         </div>
       ) : null}
@@ -94,7 +94,7 @@ export const EndpointSidebar: React.FC<EndpointSidebarProps> = ({
             <button
               type="button"
               onClick={() => toggleTag(tag)}
-              className="flex w-full items-center gap-1 px-3 py-1 text-left hover:bg-muted/40"
+              className="flex w-full items-center gap-1 px-3 py-1 text-left hover:bg-background/50"
             >
               {isCollapsed ? (
                 <ChevronRight className="h-3 w-3 text-muted-foreground" />
@@ -136,7 +136,7 @@ export const EndpointSidebar: React.FC<EndpointSidebarProps> = ({
                           handleDrop(op.id, position);
                         }}
                         className={`group flex items-center gap-1 px-1.5 py-1 ${
-                          active ? "bg-muted" : "hover:bg-muted/40"
+                          active ? "bg-background/50" : "hover:bg-background/50"
                         } ${dragId === op.id ? "opacity-50" : ""}`}
                       >
                         <GripVertical className="h-3.5 w-3.5 shrink-0 cursor-grab text-muted-foreground/70 opacity-0 transition-opacity group-hover:opacity-100 active:cursor-grabbing" />

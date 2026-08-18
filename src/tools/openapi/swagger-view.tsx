@@ -100,7 +100,7 @@ const SchemaBlock: React.FC<{ spec: OpenAPIDoc; schema?: SchemaObject; label: st
 const ParamsTable: React.FC<{ params: ParameterObject[] }> = ({ params }) => {
   if (params.length === 0) return null;
   return (
-    <div className="overflow-hidden rounded-lg border border-border/70">
+    <div className="overflow-hidden rounded-lg border border-border/50">
       <div className="grid grid-cols-[minmax(100px,1fr)_72px_minmax(88px,0.8fr)_44px_1fr] gap-2 border-b border-border/40 bg-background/50 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
         <span>Name</span>
         <span>In</span>
@@ -201,7 +201,7 @@ const OperationBlock: React.FC<{
                 const resolved = resolveRef<ResponseObject>(spec, response) ?? response;
                 const media = Object.entries(resolved.content ?? {});
                 return (
-                  <div key={code} className="rounded-lg border border-border/60 bg-background/50 p-2.5">
+                  <div key={code} className="rounded-lg border border-border/50 bg-background/50 p-2.5">
                     <div className="flex items-center gap-2">
                       <span className={`font-mono text-xs font-bold ${STATUS_STYLE(code)}`}>{code}</span>
                       <span className="text-xs text-muted-foreground">{resolved.description || "—"}</span>
@@ -255,10 +255,10 @@ export const SwaggerView: React.FC<SwaggerViewProps> = ({ spec, path, method, on
     <div className="min-h-0 flex-1 overflow-y-auto bg-background">
       <div className="flex w-full flex-col gap-4 p-4">
         {!single ? (
-          <header className="space-y-2 border-b border-border/60 pb-4">
+          <header className="space-y-2 border-b border-border/50 pb-4">
             <div className="flex flex-wrap items-baseline gap-2">
               <h1 className="font-heading text-xl tracking-tight text-foreground">{spec.info.title}</h1>
-              <span className="rounded-md border border-border bg-card px-2 py-0.5 font-mono text-xs text-muted-foreground">
+              <span className="rounded-md border border-border/50 bg-background px-2 py-0.5 font-mono text-xs text-muted-foreground">
                 v{spec.info.version}
               </span>
             </div>
@@ -270,7 +270,7 @@ export const SwaggerView: React.FC<SwaggerViewProps> = ({ spec, path, method, on
                 {spec.servers!.map((server, index) => (
                   <code
                     key={index}
-                    className="rounded-md border border-border bg-card px-2 py-1 font-mono text-[11px] text-foreground"
+                    className="rounded-md border border-border/50 bg-background px-2 py-1 font-mono text-[11px] text-foreground"
                   >
                     {server.url}
                   </code>

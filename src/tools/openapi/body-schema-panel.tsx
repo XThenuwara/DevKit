@@ -322,7 +322,7 @@ const BodyEditor: React.FC<BodyEditorProps> = ({
 
   return (
     <section className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      <header className="flex shrink-0 items-center gap-2 border-b border-border/60 px-3 py-2">
+      <header className="flex shrink-0 items-center gap-2 border-b border-border/50 px-3 py-2">
         {layout === "compact" ? (
           <h3 className="text-[11px] font-bold uppercase tracking-wider text-foreground">{title}</h3>
         ) : null}

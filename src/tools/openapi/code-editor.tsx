@@ -74,7 +74,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
 
   return (
-    <div className={`relative flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-card ${className}`}>
+    <div className={`relative flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-background ${className}`}>
       {showFoldControls ? (
         <div className="absolute top-1.5 right-1.5 z-10">
           <DropdownMenu>
@@ -149,7 +149,7 @@ export const CodeDiffEditor: React.FC<CodeDiffEditorProps> = ({
   const dark = useIsDark();
 
   return (
-    <div className={`relative min-h-0 overflow-hidden bg-card ${className}`}>
+    <div className={`relative min-h-0 overflow-hidden bg-background ${className}`}>
       <div className="absolute inset-0">
         <DiffEditor
           height={height}
