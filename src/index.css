@@ -239,41 +239,119 @@ html[data-theme="claude-dusk"] {
 }
 
 html[data-theme="claude-dusk"].dark {
-    --background: #3a3732;
-    --foreground: #f7f4ee;
-    --card: #45423c;
-    --card-foreground: #f7f4ee;
-    --popover: #4c4943;
-    --popover-foreground: #f7f4ee;
+    --background: #2e2b27;
+    --foreground: #faf6f0;
+    --card: #38342f;
+    --card-foreground: #faf6f0;
+    --popover: #403c36;
+    --popover-foreground: #faf6f0;
     --primary: #d97757;
-    --primary-foreground: #2b2925;
-    --secondary: #4c4943;
-    --secondary-foreground: #f7f4ee;
-    --muted: #4c4943;
-    --muted-foreground: #c2bdb3;
-    --accent: #55524b;
-    --accent-foreground: #f7f4ee;
+    --primary-foreground: #1f1d1a;
+    --secondary: #403c36;
+    --secondary-foreground: #faf6f0;
+    --muted: #403c36;
+    --muted-foreground: #d4cec4;
+    --accent: #4a4540;
+    --accent-foreground: #faf6f0;
     --destructive: #e07070;
-    --border: #5a564e;
-    --input: #5a564e;
+    --border: #524d46;
+    --input: #524d46;
     --ring: #d97757;
     --chart-1: #d97757;
     --chart-2: #5db8a6;
     --chart-3: #e8a55a;
-    --chart-4: #c2bdb3;
-    --chart-5: #f7f4ee;
-    --sidebar: #35322d;
-    --sidebar-foreground: #f7f4ee;
+    --chart-4: #d4cec4;
+    --chart-5: #faf6f0;
+    --sidebar: #262320;
+    --sidebar-foreground: #faf6f0;
     --sidebar-primary: #d97757;
-    --sidebar-primary-foreground: #2b2925;
-    --sidebar-accent: #4c4943;
-    --sidebar-accent-foreground: #f7f4ee;
-    --sidebar-border: #5a564e;
+    --sidebar-primary-foreground: #1f1d1a;
+    --sidebar-accent: #403c36;
+    --sidebar-accent-foreground: #faf6f0;
+    --sidebar-border: #524d46;
     --sidebar-ring: #d97757;
     color-scheme: dark;
 }
 
 html[data-theme="claude-dusk"] .font-heading {
+    letter-spacing: -0.02em;
+    font-weight: 400;
+}
+
+html[data-theme="claude-twilight"] {
+    --background: #f5f4ed;
+    --foreground: #141413;
+    --card: #faf9f5;
+    --card-foreground: #141413;
+    --popover: #faf9f5;
+    --popover-foreground: #141413;
+    --primary: #c96442;
+    --primary-foreground: #faf9f5;
+    --secondary: #efe9de;
+    --secondary-foreground: #141413;
+    --muted: #efe9de;
+    --muted-foreground: #6c6a64;
+    --accent: #efe9de;
+    --accent-foreground: #141413;
+    --destructive: #c64545;
+    --border: #e6dfd8;
+    --input: #e8e6dc;
+    --ring: #c96442;
+    --chart-1: #c96442;
+    --chart-2: #5db8a6;
+    --chart-3: #d4a017;
+    --chart-4: #6c6a64;
+    --chart-5: #141413;
+    --radius: 0.5rem;
+    --sidebar: #f0eee6;
+    --sidebar-foreground: #141413;
+    --sidebar-primary: #c96442;
+    --sidebar-primary-foreground: #faf9f5;
+    --sidebar-accent: #efe9de;
+    --sidebar-accent-foreground: #141413;
+    --sidebar-border: #e6dfd8;
+    --sidebar-ring: #c96442;
+    --font-heading: "Instrument Serif", "Iowan Old Style", Palatino, Georgia, serif;
+    --font-heading-family: "Instrument Serif", "Iowan Old Style", Palatino, Georgia, serif;
+    color-scheme: light;
+}
+
+html[data-theme="claude-twilight"].dark {
+    --background: #272522;
+    --foreground: #f5f2eb;
+    --card: #312e2a;
+    --card-foreground: #f5f2eb;
+    --popover: #363330;
+    --popover-foreground: #f5f2eb;
+    --primary: #d97757;
+    --primary-foreground: #1a1917;
+    --secondary: #363330;
+    --secondary-foreground: #f5f2eb;
+    --muted: #363330;
+    --muted-foreground: #b8b2a8;
+    --accent: #3d3a36;
+    --accent-foreground: #f5f2eb;
+    --destructive: #e07070;
+    --border: #45413c;
+    --input: #45413c;
+    --ring: #d97757;
+    --chart-1: #d97757;
+    --chart-2: #5db8a6;
+    --chart-3: #e8a55a;
+    --chart-4: #b8b2a8;
+    --chart-5: #f5f2eb;
+    --sidebar: #201e1b;
+    --sidebar-foreground: #f5f2eb;
+    --sidebar-primary: #d97757;
+    --sidebar-primary-foreground: #1a1917;
+    --sidebar-accent: #363330;
+    --sidebar-accent-foreground: #f5f2eb;
+    --sidebar-border: #45413c;
+    --sidebar-ring: #d97757;
+    color-scheme: dark;
+}
+
+html[data-theme="claude-twilight"] .font-heading {
     letter-spacing: -0.02em;
     font-weight: 400;
 }

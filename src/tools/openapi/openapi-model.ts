@@ -738,6 +738,7 @@ const walkSchemaRefs = (
   spec: OpenAPIDoc,
   schema: SchemaObject | undefined,
   acc: Set<string>,
+  deep: boolean,
   seen = new Set<string>(),
 ) => {
   if (!schema) return;
@@ -746,22 +747,57 @@ const walkSchemaRefs = (
     if (parsed?.group === "schemas" && !seen.has(parsed.name)) {
       seen.add(parsed.name);
       acc.add(parsed.name);
-      walkSchemaRefs(spec, spec.components?.schemas?.[parsed.name], acc, seen);
+      if (deep) {
+        walkSchemaRefs(spec, spec.components?.schemas?.[parsed.name], acc, deep, seen);
+      }
     }
     return;
   }
-  if (schema.items) walkSchemaRefs(spec, schema.items, acc, seen);
+  if (schema.items) walkSchemaRefs(spec, schema.items, acc, deep, seen);
   if (schema.properties) {
-    for (const child of Object.values(schema.properties)) walkSchemaRefs(spec, child, acc, seen);
+    for (const child of Object.values(schema.properties)) walkSchemaRefs(spec, child, acc, deep, seen);
   }
   if (schema.additionalProperties && typeof schema.additionalProperties === "object") {
-    walkSchemaRefs(spec, schema.additionalProperties, acc, seen);
+    walkSchemaRefs(spec, schema.additionalProperties, acc, deep, seen);
   }
   for (const union of [schema.oneOf, schema.anyOf, schema.allOf]) {
-    union?.forEach((child) => walkSchemaRefs(spec, child, acc, seen));
+    union?.forEach((child) => walkSchemaRefs(spec, child, acc, deep, seen));
   }
 };
 
+/** Schemas directly referenced from this operation (body, params, responses). */
+export const collectDirectOperationSchemaNames = (
+  spec: OpenAPIDoc,
+  path: string,
+  method: HttpMethod,
+): string[] => {
+  const names = new Set<string>();
+  const pathItem = spec.paths?.[path];
+  const operation = getOperation(spec, path, method);
+  if (!operation) return [];
+
+  const params = [...(pathItem?.parameters ?? []), ...(operation.parameters ?? [])];
+  for (const param of params) {
+    const resolved = resolveRef<ParameterObject>(spec, param);
+    walkSchemaRefs(spec, resolved?.schema, names, false);
+  }
+
+  const body = resolveRef<RequestBodyObject>(spec, operation.requestBody);
+  for (const media of Object.values(body?.content ?? {})) {
+    walkSchemaRefs(spec, media.schema, names, false);
+  }
+
+  for (const response of Object.values(operation.responses ?? {})) {
+    const resolved = resolveRef<ResponseObject>(spec, response);
+    for (const media of Object.values(resolved?.content ?? {})) {
+      walkSchemaRefs(spec, media.schema, names, false);
+    }
+  }
+
+  return [...names].sort((a, b) => a.localeCompare(b));
+};
+
+/** Schemas referenced by this operation, including nested $refs inside linked models. */
 export const collectOperationSchemaNames = (
   spec: OpenAPIDoc,
   path: string,
@@ -775,18 +811,18 @@ export const collectOperationSchemaNames = (
   const params = [...(pathItem?.parameters ?? []), ...(operation.parameters ?? [])];
   for (const param of params) {
     const resolved = resolveRef<ParameterObject>(spec, param);
-    walkSchemaRefs(spec, resolved?.schema, names);
+    walkSchemaRefs(spec, resolved?.schema, names, true);
   }
 
   const body = resolveRef<RequestBodyObject>(spec, operation.requestBody);
   for (const media of Object.values(body?.content ?? {})) {
-    walkSchemaRefs(spec, media.schema, names);
+    walkSchemaRefs(spec, media.schema, names, true);
   }
 
   for (const response of Object.values(operation.responses ?? {})) {
     const resolved = resolveRef<ResponseObject>(spec, response);
     for (const media of Object.values(resolved?.content ?? {})) {
-      walkSchemaRefs(spec, media.schema, names);
+      walkSchemaRefs(spec, media.schema, names, true);
     }
   }
 
@@ -1026,7 +1062,7 @@ export const buildOperationView = (spec: OpenAPIDoc, path: string, method: HttpM
   if (pathItem.parameters?.length) pathEntry.parameters = cloneSpec(pathItem.parameters);
   pathEntry[method] = cloneSpec(operation);
 
-  const schemaNames = collectOperationSchemaNames(spec, path, method);
+  const schemaNames = collectDirectOperationSchemaNames(spec, path, method);
   const view: Record<string, unknown> = { [path]: pathEntry };
   if (schemaNames.length) {
     const schemas: Record<string, SchemaObject> = {};

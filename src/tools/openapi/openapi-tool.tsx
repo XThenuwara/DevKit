@@ -33,6 +33,7 @@ import { OperationYamlPanel } from "./operation-yaml-panel";
 import { ParametersPanel } from "./parameters-panel";
 import { SchemaCrumbEditor } from "./schema-crumb-editor";
 import { SuggestMenu } from "./suggest-menu";
+import { SwaggerView } from "./swagger-view";
 import {
   SAMPLE_OPENAPI,
   addOperation,
@@ -121,6 +122,7 @@ const RequestEditor: React.FC<{
         <TabsList className="h-7">
           <TabsTrigger value="params" className="h-6 px-2.5 text-[11px]">Params</TabsTrigger>
           <TabsTrigger value="body" className="h-6 px-2.5 text-[11px]">Body</TabsTrigger>
+          <TabsTrigger value="preview" className="h-6 px-2.5 text-[11px]">Preview</TabsTrigger>
           <TabsTrigger value="yaml" className="h-6 px-2.5 text-[11px]">Source</TabsTrigger>
           <TabsTrigger value="docs" className="h-6 px-2.5 text-[11px]">Docs</TabsTrigger>
         </TabsList>
@@ -164,6 +166,9 @@ const RequestEditor: React.FC<{
               })
             }
           />
+        ) : null}
+        {tab === "preview" ? (
+          <SwaggerView spec={spec} path={path} method={method} />
         ) : null}
         {tab === "yaml" ? (
           <OperationYamlPanel
@@ -378,22 +383,26 @@ const SpecOverview: React.FC<{
   onSourceChange: (text: string) => void;
   onFormatChange: (format: SpecFormat) => void;
   onParseError: (message: string | null) => void;
-}> = ({ spec, format, sourceText, operationsCount, onSpecChange, onSourceChange, onFormatChange, onParseError }) => {
-  const [mode, setMode] = useState<"visual" | "source">("visual");
+  onSelectOperation?: (path: string, method: HttpMethod) => void;
+}> = ({ spec, format, sourceText, operationsCount, onSpecChange, onSourceChange, onFormatChange, onParseError, onSelectOperation }) => {
+  const [mode, setMode] = useState<"visual" | "swagger" | "source">("visual");
   const schemaNames = collectSchemaNames(spec);
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-card">
       <div className="shrink-0 flex items-center justify-between border-b border-border px-3 py-2">
         <p className="text-xs font-bold">Collection overview</p>
-        <Tabs value={mode} onValueChange={(value) => setMode(value as "visual" | "source")}>
+        <Tabs value={mode} onValueChange={(value) => setMode(value as "visual" | "swagger" | "source")}>
           <TabsList className="h-7">
             <TabsTrigger value="visual" className="h-6 px-2 text-[11px]">Info</TabsTrigger>
+            <TabsTrigger value="swagger" className="h-6 px-2 text-[11px]">Swagger</TabsTrigger>
             <TabsTrigger value="source" className="h-6 px-2 text-[11px]">Source</TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
-      {mode === "source" ? (
+      {mode === "swagger" ? (
+        <SwaggerView spec={spec} onSelectOperation={onSelectOperation} />
+      ) : mode === "source" ? (
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <CodeEditor
             value={sourceText}
@@ -926,6 +935,7 @@ export const OpenApiTool: React.FC = () => {
                 onSourceChange={setSourceText}
                 onFormatChange={setFormat}
                 onParseError={setError}
+                onSelectOperation={(opPath, opMethod) => setSelected({ path: opPath, method: opMethod })}
               />
             </div>
           )}

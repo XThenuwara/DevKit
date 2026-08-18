@@ -30,7 +30,7 @@ export const OperationYamlPanel: React.FC<{
         <div className="min-w-0">
           <p className="text-[11px] font-bold uppercase tracking-wider">Source</p>
           <p className="truncate text-[10px] text-muted-foreground">
-            Linked $refs stay linked. Edit shared models under components.schemas.
+            Linked $refs stay linked. Only schemas used by this operation are shown.
           </p>
         </div>
         <div className="flex items-center gap-1">
