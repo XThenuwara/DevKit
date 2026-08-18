@@ -103,8 +103,8 @@ const BodyEditor: React.FC<BodyEditorProps> = ({
   }, [pane, refInfo?.group, refInfo?.name]);
 
   const linkedSchemaNames = useMemo(
-    () => collectLinkedSchemaNames(spec, rawSchema),
-    [rawSchema, spec],
+    () => collectLinkedSchemaNames(spec, rawSchema ?? resolved),
+    [rawSchema, resolved, spec],
   );
 
   const schemaForTarget = schemaTargetName

@@ -795,13 +795,13 @@ const walkSchemaRefs = (
   }
 };
 
-/** $ref schema names used in a schema tree (does not follow into linked component bodies). */
+/** $ref schema names used by this schema, including nested refs inside linked models. */
 export const collectLinkedSchemaNames = (
   spec: OpenAPIDoc,
   schema: SchemaObject | undefined,
 ): string[] => {
   const names = new Set<string>();
-  walkSchemaRefs(spec, schema, names, false);
+  walkSchemaRefs(spec, schema, names, true);
   return [...names].sort((a, b) => a.localeCompare(b));
 };
 
