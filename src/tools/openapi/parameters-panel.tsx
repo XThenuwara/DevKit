@@ -1,7 +1,22 @@
 import React, { useMemo, useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { MoreHorizontal, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
@@ -118,7 +133,7 @@ export const ParametersTable: React.FC<ParametersTableProps> = ({
 
   if (rows.length === 0) {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-3">
+      <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3">
         <p className="text-xs text-muted-foreground">No parameters yet. Add a field or reuse one from this spec.</p>
         <div className="flex flex-wrap items-center justify-center gap-1.5">
           <Button variant="outline" size="sm" className="h-7 text-xs" type="button" onClick={() => onAdd("path")}>
@@ -139,8 +154,8 @@ export const ParametersTable: React.FC<ParametersTableProps> = ({
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden">
-      <div className="grid min-w-[720px] shrink-0 grid-cols-[1fr_80px_88px_88px_44px_1fr_72px_32px] gap-0 border-b border-border/60 px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <div className="grid min-w-[720px] shrink-0 grid-cols-[1fr_80px_88px_88px_44px_1fr_72px] gap-0 border-b border-border/60 px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
         <span>Name</span>
         <span>In</span>
         <span>Type</span>
@@ -148,7 +163,6 @@ export const ParametersTable: React.FC<ParametersTableProps> = ({
         <span>Req</span>
         <span>Description</span>
         <span>Example</span>
-        <span />
       </div>
       <div className="min-h-0 flex-1 overflow-auto">
         {rows.map((row, visualIndex) => {
@@ -164,12 +178,13 @@ export const ParametersTable: React.FC<ParametersTableProps> = ({
             ),
           });
           return (
-            <div
-              key={rowKey}
-              className={`grid min-w-[720px] grid-cols-[1fr_80px_88px_88px_44px_1fr_72px_32px] items-center gap-1 border-b border-border/40 px-2 py-1 ${
-                visualIndex % 2 === 0 ? "bg-transparent" : "bg-muted/25"
-              }`}
-            >
+            <ContextMenu key={rowKey}>
+              <ContextMenuTrigger asChild>
+                <div
+                  className={`grid min-w-[720px] grid-cols-[1fr_80px_88px_88px_44px_1fr_72px] items-center gap-1 border-b border-border/40 px-2 py-1 ${
+                    visualIndex % 2 === 0 ? "bg-transparent" : "bg-muted/25"
+                  }`}
+                >
               <div className="relative">
                 <Input
                   value={param.name}
@@ -310,34 +325,27 @@ export const ParametersTable: React.FC<ParametersTableProps> = ({
                 className={`${CELL} text-xs font-mono`}
                 placeholder="ex"
               />
-              <Button
-                variant="ghost"
-                size="icon-xs"
-                className="text-muted-foreground hover:text-destructive"
-                onClick={() => remove(row)}
-                type="button"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </Button>
-            </div>
+                </div>
+              </ContextMenuTrigger>
+              <ContextMenuContent className="min-w-40">
+                <ContextMenuItem disabled={param.in === "path"} onClick={() => patch(row, { ...param, required: !param.required })}>
+                  {param.required || param.in === "path" ? "Mark optional" : "Mark required"}
+                </ContextMenuItem>
+                <ContextMenuSeparator />
+                <ContextMenuItem variant="destructive" onClick={() => remove(row)}>
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Delete parameter
+                </ContextMenuItem>
+              </ContextMenuContent>
+            </ContextMenu>
           );
         })}
-        <div className="sticky bottom-0 flex items-center gap-1.5 bg-background/90 px-2 py-1.5 backdrop-blur-xs">
-          <Button variant="outline" size="sm" className="h-7 text-xs" type="button" onClick={() => onAdd("query")}>
-            <Plus className="h-3 w-3 mr-1" />
-            Add field
-          </Button>
-          <span className="text-[10px] text-muted-foreground">or</span>
-          <Button variant="ghost" size="sm" className="h-7 text-[11px]" type="button" onClick={() => onAdd("path")}>
-            Path
-          </Button>
-          <Button variant="ghost" size="sm" className="h-7 text-[11px]" type="button" onClick={() => onAdd("query")}>
-            Query
-          </Button>
-          <Button variant="ghost" size="sm" className="h-7 text-[11px]" type="button" onClick={() => onAdd("header")}>
-            Header
-          </Button>
-        </div>
+      </div>
+      <div className="flex shrink-0 items-center border-t border-border/60 px-2 py-1.5">
+        <Button variant="ghost" size="sm" className="h-7 text-xs" type="button" onClick={() => onAdd("query")}>
+          <Plus className="h-3 w-3 mr-1" />
+          Add field
+        </Button>
       </div>
     </div>
   );
@@ -351,7 +359,6 @@ export const ParametersPanel: React.FC<{
   onOpChange: (parameters: ParameterObject[]) => void;
 }> = (props) => {
   const [fullscreen, setFullscreen] = useState(false);
-  const [reuseKey, setReuseKey] = useState(0);
   const catalog = useMemo(() => collectFieldCatalog(props.spec), [props.spec]);
   const existing = useMemo(
     () => new Set([...props.pathParams, ...props.opParams].map((param) => param.name.toLowerCase())),
@@ -380,46 +387,48 @@ export const ParametersPanel: React.FC<{
 
   const renderAddToolbar = () => (
     <div className="flex items-center gap-1">
-      <Button variant="outline" size="sm" className="h-6 px-2 text-[11px]" onClick={() => add("query")} type="button">
+      <Button variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={() => add("query")} type="button">
         <Plus className="h-3 w-3 mr-1" />
         Add field
       </Button>
-      <Button variant="ghost" size="sm" className="h-6 px-2 text-[11px]" onClick={() => add("path")} type="button">
-        Path
-      </Button>
-      <Button variant="ghost" size="sm" className="h-6 px-2 text-[11px]" onClick={() => add("query")} type="button">
-        Query
-      </Button>
-      <Button variant="ghost" size="sm" className="h-6 px-2 text-[11px]" onClick={() => add("header")} type="button">
-        Header
-      </Button>
-      {reusable.length > 0 ? (
-        <Select
-          key={reuseKey}
-          onValueChange={(key) => {
-            const item = catalog.find((entry) => entry.key === key);
-            if (item) add(item.in ?? "query", item);
-            setReuseKey((n) => n + 1);
-          }}
-        >
-          <SelectTrigger className="h-6 w-[108px] text-[11px]">
-            <SelectValue placeholder="Reuse…" />
-          </SelectTrigger>
-          <SelectContent>
-            {reusable.map((item) => (
-              <SelectItem key={item.key} value={item.key}>
-                {item.name}
-                {item.kind === "parameter" && item.in ? ` (${item.in})` : ` · ${item.kind}`}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      ) : null}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="icon-xs" type="button">
+            <MoreHorizontal className="h-4 w-4" />
+            <span className="sr-only">More parameter options</span>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="min-w-44">
+          <DropdownMenuLabel>Add</DropdownMenuLabel>
+          <DropdownMenuItem onClick={() => add("path")}>Path parameter</DropdownMenuItem>
+          <DropdownMenuItem onClick={() => add("query")}>Query parameter</DropdownMenuItem>
+          <DropdownMenuItem onClick={() => add("header")}>Header</DropdownMenuItem>
+          {reusable.length > 0 ? (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel>Reuse from spec</DropdownMenuLabel>
+              {reusable.slice(0, 12).map((item) => (
+                <DropdownMenuItem
+                  key={item.key}
+                  onClick={() => add(item.in ?? "query", item)}
+                >
+                  {item.name}
+                  <span className="ml-auto text-[10px] text-muted-foreground">
+                    {item.kind === "parameter" && item.in ? item.in : item.kind}
+                  </span>
+                </DropdownMenuItem>
+              ))}
+            </>
+          ) : null}
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={() => setFullscreen(true)}>Expand</DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 
   return (
-    <section className="flex h-full min-h-0 flex-col overflow-hidden">
+    <section className="flex min-h-0 flex-1 flex-col overflow-hidden">
       <header className="flex shrink-0 items-center justify-between gap-2 border-b border-border/60 px-3 py-2">
         <h3 className="text-[11px] font-bold uppercase tracking-wider text-foreground">Parameters</h3>
         <div className="flex items-center gap-1">
@@ -428,14 +437,14 @@ export const ParametersPanel: React.FC<{
             title="Parameters"
             open={fullscreen}
             onOpenChange={setFullscreen}
-            triggerLabel="Expand"
+            showTrigger={false}
             headerAction={renderAddToolbar()}
           >
             <ParametersTable {...props} onAdd={add} />
           </FullscreenModal>
         </div>
       </header>
-      <div className="min-h-0 flex-1">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <ParametersTable {...props} onAdd={add} />
       </div>
     </section>

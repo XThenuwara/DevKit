@@ -2,6 +2,17 @@ import React, { useMemo, useRef, useState } from "react";
 import { ChevronDown, ChevronRight, Link2, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  ContextMenu,
+  ContextMenuCheckboxItem,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuSub,
+  ContextMenuSubContent,
+  ContextMenuSubTrigger,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
@@ -28,7 +39,7 @@ const FORMATS: Record<string, string[]> = {
   number: ["", "float", "double"],
 };
 
-const GRID = "grid grid-cols-[18px_minmax(110px,1.15fr)_88px_minmax(92px,0.9fr)_36px_1fr_32px] items-center gap-1";
+const GRID = "grid grid-cols-[18px_minmax(110px,1.15fr)_88px_minmax(92px,0.9fr)_36px_1fr] items-center gap-1";
 const CELL =
   "h-7 bg-transparent border-transparent shadow-none hover:bg-background hover:border-input focus-visible:bg-background";
 
@@ -116,7 +127,9 @@ const FieldRow: React.FC<FieldRowProps> = ({
 
   return (
     <div>
-      <div className={`${GRID} px-2 py-1 hover:bg-muted/40`} style={{ paddingLeft: 8 + depth * 14 }}>
+      <ContextMenu>
+        <ContextMenuTrigger asChild>
+          <div className={`${GRID} px-2 py-1 hover:bg-muted/40`} style={{ paddingLeft: 8 + depth * 14 }}>
         <button
           type="button"
           className="flex h-7 w-[18px] items-center justify-center text-muted-foreground"
@@ -233,16 +246,33 @@ const FieldRow: React.FC<FieldRowProps> = ({
           className={`${CELL} text-xs`}
           placeholder="Description"
         />
-        <Button
-          variant="ghost"
-          size="icon-xs"
-          className="text-muted-foreground hover:text-destructive"
-          type="button"
-          onClick={onDelete}
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-        </Button>
-      </div>
+          </div>
+        </ContextMenuTrigger>
+        <ContextMenuContent className="min-w-44">
+          <ContextMenuCheckboxItem checked={required} onCheckedChange={(value) => onToggleRequired(value === true)}>
+            Required
+          </ContextMenuCheckboxItem>
+          {type === "$ref" ? (
+            <ContextMenuItem onClick={() => onChange(structuredClone(resolved))}>Unlink schema</ContextMenuItem>
+          ) : schemaNames.length > 0 ? (
+            <ContextMenuSub>
+              <ContextMenuSubTrigger>Use schema</ContextMenuSubTrigger>
+              <ContextMenuSubContent className="min-w-40">
+                {schemaNames.map((item) => (
+                  <ContextMenuItem key={item} onClick={() => onChange({ $ref: componentRef("schemas", item) })}>
+                    {item}
+                  </ContextMenuItem>
+                ))}
+              </ContextMenuSubContent>
+            </ContextMenuSub>
+          ) : null}
+          <ContextMenuSeparator />
+          <ContextMenuItem variant="destructive" onClick={onDelete}>
+            <Trash2 className="h-3.5 w-3.5" />
+            Delete field
+          </ContextMenuItem>
+        </ContextMenuContent>
+      </ContextMenu>
 
       {open && type === "$ref" && circular ? (
         <p className="px-2 py-1 text-[11px] text-muted-foreground" style={{ paddingLeft: 28 + depth * 14 }}>
@@ -420,7 +450,7 @@ export const SchemaTreeEditor: React.FC<SchemaTreeEditorProps> = ({ spec, schema
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       <div className={`${GRID} shrink-0 border-b border-border/60 px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground`}>
         <span />
         <span>Field</span>
@@ -428,7 +458,6 @@ export const SchemaTreeEditor: React.FC<SchemaTreeEditorProps> = ({ spec, schema
         <span>Format</span>
         <span>Req</span>
         <span>Description</span>
-        <span />
       </div>
       <div className="min-h-0 flex-1 overflow-auto">
         {type !== "object" ? (
@@ -503,7 +532,7 @@ export const SchemaTreeEditor: React.FC<SchemaTreeEditorProps> = ({ spec, schema
         )}
       </div>
       {type === "object" ? (
-        <div className="flex shrink-0 items-center px-2 py-1.5">
+        <div className="flex shrink-0 items-center border-t border-border/60 px-2 py-1.5">
           <Button
             variant="ghost"
             size="sm"

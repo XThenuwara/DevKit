@@ -5,20 +5,6 @@ import { mergeOperationView, serializeOperationView } from "./openapi-model";
 import { CodeEditor } from "./code-editor";
 import type { HttpMethod, OpenAPIDoc, SpecFormat } from "./openapi-types";
 
-const Section: React.FC<{ title: string; action?: React.ReactNode; children: React.ReactNode }> = ({
-  title,
-  action,
-  children,
-}) => (
-  <section className="rounded-lg border border-border bg-background">
-    <header className="flex items-center justify-between gap-2 border-b border-border bg-muted/50 px-3 py-2">
-      <h3 className="text-[11px] font-bold uppercase tracking-wider text-foreground">{title}</h3>
-      {action}
-    </header>
-    <div className="p-3 space-y-3">{children}</div>
-  </section>
-);
-
 export const OperationYamlPanel: React.FC<{
   spec: OpenAPIDoc;
   path: string;
@@ -39,9 +25,14 @@ export const OperationYamlPanel: React.FC<{
   }, [generated, dirty]);
 
   return (
-    <Section
-      title="Operation source"
-      action={
+    <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
+      <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border/60 px-3 py-2">
+        <div className="min-w-0">
+          <p className="text-[11px] font-bold uppercase tracking-wider">Source</p>
+          <p className="truncate text-[10px] text-muted-foreground">
+            Linked schemas are stitched in. Apply writes back to the spec.
+          </p>
+        </div>
         <div className="flex items-center gap-1">
           <CopyButton value={draft} className="h-7 w-7" />
           {dirty ? (
@@ -49,7 +40,7 @@ export const OperationYamlPanel: React.FC<{
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-6 px-2 text-[11px]"
+                className="h-7 px-2 text-xs"
                 type="button"
                 onClick={() => {
                   setDraft(generated);
@@ -60,7 +51,7 @@ export const OperationYamlPanel: React.FC<{
               </Button>
               <Button
                 size="sm"
-                className="h-6 px-2 text-[11px]"
+                className="h-7 px-2 text-xs"
                 type="button"
                 onClick={() => {
                   try {
@@ -78,20 +69,19 @@ export const OperationYamlPanel: React.FC<{
             </>
           ) : null}
         </div>
-      }
-    >
-      <p className="text-[11px] text-muted-foreground">
-        Resolved view with linked schemas stitched in. Edits apply back to the full spec.
-      </p>
-      <CodeEditor
-        value={draft}
-        onChange={(value) => {
-          setDraft(value);
-          setDirty(value !== generated);
-        }}
-        language={format}
-        height={420}
-      />
-    </Section>
+      </div>
+      <div className="relative min-h-0 flex-1">
+        <CodeEditor
+          value={draft}
+          onChange={(value) => {
+            setDraft(value);
+            setDirty(value !== generated);
+          }}
+          language={format}
+          height="100%"
+          className="h-full rounded-none border-0"
+        />
+      </div>
+    </div>
   );
 };

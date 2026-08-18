@@ -1,8 +1,16 @@
 import React, { useEffect, useRef, useState } from "react";
 import Editor, { DiffEditor, type Monaco } from "@monaco-editor/react";
 import type { editor } from "monaco-editor";
-import { ChevronsDownUp, ChevronsUpDown } from "lucide-react";
+import { MoreHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export type CodeLanguage = "yaml" | "json";
 
@@ -41,46 +49,6 @@ const runFold = (instance: editor.IStandaloneCodeEditor | null, action: string) 
   void instance?.getAction(action)?.run();
 };
 
-const FoldToolbar: React.FC<{ editor: editor.IStandaloneCodeEditor | null }> = ({ editor: instance }) => (
-  <div className="flex shrink-0 items-center gap-1 border-b border-border bg-muted/40 px-2 py-1">
-    <span className="mr-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Fold</span>
-    <Button
-      variant="ghost"
-      size="sm"
-      className="h-6 px-2 text-[10px]"
-      type="button"
-      onClick={() => runFold(instance, "editor.unfoldAll")}
-    >
-      <ChevronsUpDown className="h-3 w-3 mr-1" />
-      Expand all
-    </Button>
-    <Button
-      variant="ghost"
-      size="sm"
-      className="h-6 px-2 text-[10px]"
-      type="button"
-      onClick={() => runFold(instance, "editor.foldAll")}
-    >
-      <ChevronsDownUp className="h-3 w-3 mr-1" />
-      Collapse all
-    </Button>
-    <span className="mx-1 h-3 w-px bg-border" />
-    {[1, 2, 3, 4].map((level) => (
-      <Button
-        key={level}
-        variant="ghost"
-        size="sm"
-        className="h-6 w-7 px-0 text-[10px] font-mono"
-        type="button"
-        title={`Collapse to level ${level}`}
-        onClick={() => runFold(instance, `editor.foldLevel${level}`)}
-      >
-        L{level}
-      </Button>
-    ))}
-  </div>
-);
-
 type CodeEditorProps = {
   value: string;
   onChange?: (value: string) => void;
@@ -104,31 +72,60 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
 }) => {
   const dark = useIsDark();
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
-  const [, setReady] = useState(0);
 
   return (
-    <div className={`flex h-full min-h-0 flex-col overflow-hidden rounded-md border border-border bg-card ${className}`}>
-      {showFoldControls ? <FoldToolbar editor={editorRef.current} /> : null}
-      <div className="min-h-0 flex-1">
-        <Editor
-          height={height}
-          language={language}
-          value={value}
-          theme={dark ? "vs-dark" : "vs"}
-          options={{ ...editorOptions, readOnly }}
-          onChange={(next) => onChange?.(next ?? "")}
-          onMount={(instance) => {
-            editorRef.current = instance;
-            setReady((n) => n + 1);
-            if (onBlur) instance.onDidBlurEditorText(onBlur);
-          }}
-          beforeMount={(monaco: Monaco) => {
-            monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
-              validate: true,
-              allowComments: false,
-            });
-          }}
-        />
+    <div className={`relative flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-card ${className}`}>
+      {showFoldControls ? (
+        <div className="absolute top-1.5 right-1.5 z-10">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon-xs" type="button" className="bg-background/80 backdrop-blur-xs">
+                <MoreHorizontal className="h-3.5 w-3.5" />
+                <span className="sr-only">Editor options</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="min-w-40">
+              <DropdownMenuLabel>Folding</DropdownMenuLabel>
+              <DropdownMenuItem onClick={() => runFold(editorRef.current, "editor.unfoldAll")}>
+                Expand all
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => runFold(editorRef.current, "editor.foldAll")}>
+                Collapse all
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              {[1, 2, 3, 4].map((level) => (
+                <DropdownMenuItem
+                  key={level}
+                  onClick={() => runFold(editorRef.current, `editor.foldLevel${level}`)}
+                >
+                  Collapse to level {level}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      ) : null}
+      <div className="relative min-h-0 flex-1">
+        <div className="absolute inset-0">
+          <Editor
+            height={height}
+            language={language}
+            value={value}
+            theme={dark ? "vs-dark" : "vs"}
+            options={{ ...editorOptions, readOnly }}
+            onChange={(next) => onChange?.(next ?? "")}
+            onMount={(instance) => {
+              editorRef.current = instance;
+              if (onBlur) instance.onDidBlurEditorText(onBlur);
+            }}
+            beforeMount={(monaco: Monaco) => {
+              monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
+                validate: true,
+                allowComments: false,
+              });
+            }}
+          />
+        </div>
       </div>
     </div>
   );
@@ -152,20 +149,22 @@ export const CodeDiffEditor: React.FC<CodeDiffEditorProps> = ({
   const dark = useIsDark();
 
   return (
-    <div className={`h-full min-h-0 overflow-hidden rounded-md border border-border bg-card ${className}`}>
-      <DiffEditor
-        height={height}
-        language={language}
-        original={original}
-        modified={modified}
-        theme={dark ? "vs-dark" : "vs"}
-        options={{
-          ...editorOptions,
-          readOnly: true,
-          renderSideBySide: true,
-          enableSplitViewResizing: true,
-        }}
-      />
+    <div className={`relative min-h-0 overflow-hidden bg-card ${className}`}>
+      <div className="absolute inset-0">
+        <DiffEditor
+          height={height}
+          language={language}
+          original={original}
+          modified={modified}
+          theme={dark ? "vs-dark" : "vs"}
+          options={{
+            ...editorOptions,
+            readOnly: true,
+            renderSideBySide: true,
+            enableSplitViewResizing: true,
+          }}
+        />
+      </div>
     </div>
   );
 };

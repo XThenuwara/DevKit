@@ -4,6 +4,7 @@ import {
   FileJson,
   FileUp,
   FolderOpen,
+  MoreHorizontal,
   Plus,
   Search,
   Sparkles,
@@ -13,7 +14,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { CopyButton } from "@/components/shared/copy-button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
@@ -72,7 +80,7 @@ const STATUS_TONE = (code: string) => {
 };
 
 const FieldLabel: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{children}</span>
+  <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{children}</Label>
 );
 
 const Section: React.FC<{ title: string; action?: React.ReactNode; children: React.ReactNode; fill?: boolean }> = ({
@@ -107,20 +115,18 @@ const RequestEditor: React.FC<{
   const related = collectOperationSchemaNames(spec, path, method);
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-card">
-      <div className="shrink-0 flex items-center justify-between border-b border-border px-3 py-2">
+    <Tabs value={tab} onValueChange={setTab} className="flex h-full min-h-0 flex-1 flex-col gap-0 overflow-hidden bg-card">
+      <div className="flex shrink-0 items-center justify-between border-b border-border px-3 py-2">
         <p className="text-xs font-bold">Request</p>
-        <Tabs value={tab} onValueChange={setTab}>
-          <TabsList className="h-7">
-            <TabsTrigger value="params" className="h-6 px-2.5 text-[11px]">Params</TabsTrigger>
-            <TabsTrigger value="body" className="h-6 px-2.5 text-[11px]">Body</TabsTrigger>
-            <TabsTrigger value="yaml" className="h-6 px-2.5 text-[11px]">Source</TabsTrigger>
-            <TabsTrigger value="docs" className="h-6 px-2.5 text-[11px]">Docs</TabsTrigger>
-          </TabsList>
-        </Tabs>
+        <TabsList className="h-7">
+          <TabsTrigger value="params" className="h-6 px-2.5 text-[11px]">Params</TabsTrigger>
+          <TabsTrigger value="body" className="h-6 px-2.5 text-[11px]">Body</TabsTrigger>
+          <TabsTrigger value="yaml" className="h-6 px-2.5 text-[11px]">Source</TabsTrigger>
+          <TabsTrigger value="docs" className="h-6 px-2.5 text-[11px]">Docs</TabsTrigger>
+        </TabsList>
       </div>
-      <div className={`flex-1 min-h-0 ${tab === "params" || tab === "body" ? "flex flex-col overflow-hidden" : "overflow-y-auto space-y-3 p-3"}`}>
-        {tab === "params" && (
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        {tab === "params" ? (
           <ParametersPanel
             spec={spec}
             pathParams={pathItem.parameters ?? []}
@@ -130,9 +136,8 @@ const RequestEditor: React.FC<{
             }
             onOpChange={(parameters) => patchOp({ ...operation, parameters })}
           />
-        )}
-
-        {tab === "body" && (
+        ) : null}
+        {tab === "body" ? (
           <BodySchemaPanel
             spec={spec}
             title="Request body"
@@ -159,9 +164,8 @@ const RequestEditor: React.FC<{
               })
             }
           />
-        )}
-
-        {tab === "yaml" && (
+        ) : null}
+        {tab === "yaml" ? (
           <OperationYamlPanel
             spec={spec}
             path={path}
@@ -170,30 +174,29 @@ const RequestEditor: React.FC<{
             onSpecChange={onSpecChange}
             onError={onError}
           />
-        )}
-
-        {tab === "docs" && (
-          <>
-            <Section title="Operation">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <label className="flex flex-col gap-1">
+        ) : null}
+        {tab === "docs" ? (
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            <div className="mx-auto flex h-full min-h-0 w-full max-w-2xl flex-1 flex-col gap-4 overflow-y-auto p-4">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="flex flex-col gap-1.5">
                   <FieldLabel>Summary</FieldLabel>
                   <Input
                     value={operation.summary ?? ""}
                     onChange={(e) => patchOp({ ...operation, summary: e.target.value })}
-                    className="h-8 text-xs bg-background"
+                    className="h-8 text-xs"
                   />
-                </label>
-                <label className="flex flex-col gap-1">
+                </div>
+                <div className="flex flex-col gap-1.5">
                   <FieldLabel>Operation ID</FieldLabel>
                   <Input
                     value={operation.operationId ?? ""}
                     onChange={(e) => patchOp({ ...operation, operationId: e.target.value })}
-                    className="h-8 text-xs font-mono bg-background"
+                    className="h-8 text-xs font-mono"
                   />
-                </label>
+                </div>
               </div>
-              <label className="flex flex-col gap-1">
+              <div className="flex flex-col gap-1.5">
                 <FieldLabel>Tags</FieldLabel>
                 <Input
                   value={(operation.tags ?? []).join(", ")}
@@ -203,44 +206,48 @@ const RequestEditor: React.FC<{
                       tags: e.target.value.split(",").map((item) => item.trim()).filter(Boolean),
                     })
                   }
-                  className="h-8 text-xs bg-background"
+                  className="h-8 text-xs"
                 />
-              </label>
-              <label className="flex flex-col gap-1">
+              </div>
+              <div className="flex min-h-0 flex-1 flex-col gap-1.5">
                 <FieldLabel>Description</FieldLabel>
                 <Textarea
                   value={operation.description ?? ""}
                   onChange={(e) => patchOp({ ...operation, description: e.target.value })}
-                  className="min-h-[88px] text-xs bg-background"
+                  className="min-h-[160px] flex-1 resize-none text-xs"
                 />
-              </label>
-              <label className="flex items-center gap-2 text-xs">
+              </div>
+              <div className="flex items-center gap-2">
                 <Checkbox
+                  id="operation-deprecated"
                   checked={Boolean(operation.deprecated)}
                   onCheckedChange={(value) => patchOp({ ...operation, deprecated: value === true })}
                 />
-                Deprecated
-              </label>
-            </Section>
-            {related.length > 0 ? (
-              <Section title="Linked schemas">
-                {related.map((name) => (
-                  <div key={name} className="space-y-1.5">
-                    <p className="text-xs font-mono font-bold">{name}</p>
-                    <SchemaVisualEditor
-                      spec={spec}
-                      schema={{ $ref: componentRef("schemas", name) }}
-                      onChange={() => undefined}
-                      onSpecChange={onSpecChange}
-                    />
-                  </div>
-                ))}
-              </Section>
-            ) : null}
-          </>
-        )}
+                <Label htmlFor="operation-deprecated" className="text-xs font-medium">
+                  Deprecated
+                </Label>
+              </div>
+              {related.length > 0 ? (
+                <div className="flex flex-col gap-3 pt-2">
+                  <FieldLabel>Linked schemas</FieldLabel>
+                  {related.map((name) => (
+                    <div key={name} className="space-y-1.5">
+                      <p className="text-xs font-mono font-semibold">{name}</p>
+                      <SchemaVisualEditor
+                        spec={spec}
+                        schema={{ $ref: componentRef("schemas", name) }}
+                        onChange={() => undefined}
+                        onSpecChange={onSpecChange}
+                      />
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
       </div>
-    </div>
+    </Tabs>
   );
 };
 
@@ -280,97 +287,82 @@ const ResponseEditor: React.FC<{
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-card border-l border-border">
-      <div className="shrink-0 flex items-center justify-between border-b border-border px-3 py-2">
+    <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-card border-l border-border">
+      <header className="flex shrink-0 items-center gap-2 border-b border-border px-3 py-2">
         <p className="text-xs font-bold">Response</p>
-        <Button variant="ghost" size="sm" className="h-6 px-2 text-[11px]" onClick={addCode} type="button">
+        <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
+          {codes.length === 0 ? (
+            <p className="text-[11px] text-muted-foreground">No statuses</p>
+          ) : (
+            codes.map((code) => (
+              <Button
+                key={code}
+                variant={currentCode === code ? "secondary" : "ghost"}
+                size="sm"
+                className={`h-7 px-2 font-mono text-[11px] ${STATUS_TONE(code)}`}
+                type="button"
+                onClick={() => setActive(code)}
+              >
+                {code}
+              </Button>
+            ))
+          )}
+        </div>
+        <Button variant="outline" size="sm" className="h-7 text-xs" onClick={addCode} type="button">
           <Plus className="h-3 w-3 mr-1" />
           Status
         </Button>
-      </div>
-      <div className="shrink-0 flex items-center gap-1 overflow-x-auto border-b border-border bg-muted/40 px-2 py-1.5">
-        {codes.length === 0 ? (
-          <p className="px-1 text-[11px] text-muted-foreground">No statuses</p>
-        ) : (
-          codes.map((code) => (
-            <button
-              key={code}
-              type="button"
-              onClick={() => setActive(code)}
-              className={`rounded-md px-2.5 py-1 font-mono text-[11px] font-bold transition-colors ${
-                currentCode === code
-                  ? "bg-background text-foreground shadow-xs border border-border"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <span className={STATUS_TONE(code)}>{code}</span>
-            </button>
-          ))
-        )}
-      </div>
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden p-3 gap-3">
         {currentCode && response ? (
-          <>
-            <Section
-              title="Status"
-              action={
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 px-2 text-[11px] text-destructive hover:text-destructive"
-                  type="button"
-                  onClick={() => {
-                    const responses = { ...operation.responses };
-                    delete responses[currentCode];
-                    patchOp({ ...operation, responses });
-                  }}
-                >
-                  Remove
-                </Button>
-              }
-            >
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                <label className="flex flex-col gap-1">
-                  <FieldLabel>Code</FieldLabel>
-                  <Input
-                    value={currentCode}
-                    onChange={(e) => {
-                      const nextCode = e.target.value.trim();
-                      if (!nextCode || nextCode === currentCode || operation.responses?.[nextCode]) return;
-                      const responses = { ...operation.responses };
-                      responses[nextCode] = response;
-                      delete responses[currentCode];
-                      patchOp({ ...operation, responses });
-                      setActive(nextCode);
-                    }}
-                    className="h-8 text-xs font-mono bg-background"
-                  />
-                </label>
-                <label className="sm:col-span-2 flex flex-col gap-1">
-                  <FieldLabel>Description</FieldLabel>
-                  <Input
-                    value={response.description ?? ""}
-                    onChange={(e) => patchResponse(currentCode, { ...response, description: e.target.value })}
-                    className="h-8 text-xs bg-background"
-                  />
-                </label>
-              </div>
-            </Section>
-            <div className="min-h-0 flex-1">
-              <BodySchemaPanel
-                spec={spec}
-                title={`Response ${currentCode} body`}
-                content={response.content}
-                emptyLabel="This status has no response body."
-                onSpecChange={onSpecChange}
-                onChange={(content) => patchResponse(currentCode, { ...response, content })}
-              />
-            </div>
-          </>
-        ) : (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon-xs" type="button">
+                <MoreHorizontal className="h-4 w-4" />
+                <span className="sr-only">Status options</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="min-w-44">
+              <DropdownMenuItem
+                variant="destructive"
+                onClick={() => {
+                  const responses = { ...operation.responses };
+                  delete responses[currentCode];
+                  patchOp({ ...operation, responses });
+                }}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                Remove {currentCode}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : null}
+      </header>
+      {currentCode && response ? (
+        <>
+          <div className="flex shrink-0 items-center gap-2 border-b border-border/60 px-3 py-1.5">
+            <FieldLabel>Description</FieldLabel>
+            <Input
+              value={response.description ?? ""}
+              onChange={(e) => patchResponse(currentCode, { ...response, description: e.target.value })}
+              className="h-7 text-xs"
+              placeholder="OK"
+            />
+          </div>
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            <BodySchemaPanel
+              spec={spec}
+              title="Response body"
+              content={response.content}
+              emptyLabel="This status has no response body."
+              onSpecChange={onSpecChange}
+              onChange={(content) => patchResponse(currentCode, { ...response, content })}
+            />
+          </div>
+        </>
+      ) : (
+        <div className="flex min-h-0 flex-1 items-center justify-center p-6">
           <p className="text-xs text-muted-foreground">Add a status code to describe a response.</p>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -389,7 +381,7 @@ const SpecOverview: React.FC<{
   const schemaNames = collectSchemaNames(spec);
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-card">
+    <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-card">
       <div className="shrink-0 flex items-center justify-between border-b border-border px-3 py-2">
         <p className="text-xs font-bold">Collection overview</p>
         <Tabs value={mode} onValueChange={(value) => setMode(value as "visual" | "source")}>
@@ -400,7 +392,7 @@ const SpecOverview: React.FC<{
         </Tabs>
       </div>
       {mode === "source" ? (
-        <div className="flex-1 min-h-0 p-3">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <CodeEditor
             value={sourceText}
             onChange={onSourceChange}
@@ -416,11 +408,8 @@ const SpecOverview: React.FC<{
             }}
             language={format}
             height="100%"
-            className="h-full min-h-[320px]"
+            className="h-full rounded-none border-0"
           />
-          <p className="mt-2 text-[10px] text-muted-foreground">
-            Changes sync when you blur the editor or switch tabs.
-          </p>
         </div>
       ) : (
         <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-3">
@@ -808,7 +797,7 @@ export const OpenApiTool: React.FC = () => {
         ) : null}
       </aside>
 
-      <main className="flex min-w-0 flex-1 flex-col bg-muted/20">
+      <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-muted/20">
         <header className="flex shrink-0 items-center gap-2 border-b border-border bg-card px-3 py-2">
           {spec && selected ? (
             <>
@@ -911,28 +900,34 @@ export const OpenApiTool: React.FC = () => {
               </Button>
             </div>
           ) : selected ? (
-            <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-2 overflow-hidden">
-              <RequestEditor
-                spec={spec}
-                path={selected.path}
-                method={selected.method}
-                format={format}
-                onSpecChange={(next) => applySpec(next)}
-                onError={setError}
-              />
-              <ResponseEditor spec={spec} path={selected.path} method={selected.method} onSpecChange={(next) => applySpec(next)} />
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row">
+              <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+                <RequestEditor
+                  spec={spec}
+                  path={selected.path}
+                  method={selected.method}
+                  format={format}
+                  onSpecChange={(next) => applySpec(next)}
+                  onError={setError}
+                />
+              </div>
+              <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+                <ResponseEditor spec={spec} path={selected.path} method={selected.method} onSpecChange={(next) => applySpec(next)} />
+              </div>
             </div>
           ) : (
-            <SpecOverview
-              spec={spec}
-              format={format}
-              sourceText={sourceText}
-              operationsCount={operations.length}
-              onSpecChange={(next) => applySpec(next)}
-              onSourceChange={setSourceText}
-              onFormatChange={setFormat}
-              onParseError={setError}
-            />
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+              <SpecOverview
+                spec={spec}
+                format={format}
+                sourceText={sourceText}
+                operationsCount={operations.length}
+                onSpecChange={(next) => applySpec(next)}
+                onSourceChange={setSourceText}
+                onFormatChange={setFormat}
+                onParseError={setError}
+              />
+            </div>
           )}
         </div>
       </main>

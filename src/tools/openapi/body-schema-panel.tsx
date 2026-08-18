@@ -1,14 +1,27 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Link2, Link2Off, Maximize2, Plus, Sparkles } from "lucide-react";
+import { Link2, Maximize2, MoreHorizontal, Plus, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { CopyButton } from "@/components/shared/copy-button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CodeEditor } from "./code-editor";
 import { FullscreenModal } from "./fullscreen-modal";
 import { SchemaTreeEditor } from "./schema-tree-editor";
+import { CopyButton } from "@/components/shared/copy-button";
 import {
   COMMON_MEDIA_TYPES,
   collectSchemaNames,
@@ -58,6 +71,7 @@ const BodyEditor: React.FC<BodyEditorProps> = ({
 }) => {
   const [pane, setPane] = useState<"fields" | "example" | "schema">("fields");
   const [extractName, setExtractName] = useState("");
+  const [saveOpen, setSaveOpen] = useState(false);
   const [exampleDraft, setExampleDraft] = useState("");
   const [exampleDirty, setExampleDirty] = useState(false);
   const [schemaDraft, setSchemaDraft] = useState("");
@@ -157,7 +171,7 @@ const BodyEditor: React.FC<BodyEditorProps> = ({
 
   if (!content || types.length === 0) {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
+      <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 text-center">
         <p className="text-sm font-semibold">No body defined</p>
         <p className="max-w-sm text-xs text-muted-foreground">{emptyLabel}</p>
         <Button
@@ -205,7 +219,7 @@ const BodyEditor: React.FC<BodyEditorProps> = ({
           <CopyButton value={view === "example" ? exampleDraft : schemaDraft} className="h-6 w-6" />
         </div>
       </div>
-      <div className="min-h-0 flex-1">
+      <div className="relative min-h-0 flex-1">
         {view === "example" ? (
           <CodeEditor
             value={exampleDraft}
@@ -238,106 +252,17 @@ const BodyEditor: React.FC<BodyEditorProps> = ({
   );
 
   return (
-    <section className="flex h-full min-h-0 flex-col overflow-hidden">
-      <header className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border/60 px-3 py-2">
+    <section className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <header className="flex shrink-0 items-center gap-2 border-b border-border/60 px-3 py-2">
         {layout === "compact" ? (
           <h3 className="text-[11px] font-bold uppercase tracking-wider text-foreground">{title}</h3>
         ) : null}
-        {onRequiredChange ? (
-          <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-            <Checkbox
-              checked={Boolean(required)}
-              onCheckedChange={(value) => onRequiredChange(value === true)}
-            />
-            Required
-          </label>
-        ) : null}
-        <Select
-          value={activeType}
-          onValueChange={(nextType) => {
-            onChange({ [nextType]: content[activeType] });
-            setContentType(nextType);
-          }}
-        >
-          <SelectTrigger className="h-7 w-[188px] bg-transparent font-mono text-[11px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {mediaOptions.map((item) => (
-              <SelectItem key={item} value={item}>
-                {item}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
         {refInfo ? (
-          <div className="flex items-center gap-1">
-            <Link2 className="h-3.5 w-3.5 text-sky-700 dark:text-sky-300" />
-            <Select
-              value={refInfo.name}
-              onValueChange={(name) =>
-                onChange({
-                  ...content,
-                  [activeType]: { ...content[activeType], schema: { $ref: componentRef("schemas", name) } },
-                })
-              }
-            >
-              <SelectTrigger className="h-7 w-[140px] bg-sky-500/10 text-[11px] font-semibold text-sky-800 dark:text-sky-300">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {schemaNames.map((name) => (
-                  <SelectItem key={name} value={name}>
-                    {name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-6 px-1.5 text-[10px]"
-              type="button"
-              title="Copy schema inline"
-              onClick={() =>
-                onChange({
-                  ...content,
-                  [activeType]: { ...content[activeType], schema: structuredClone(resolved) },
-                })
-              }
-            >
-              <Link2Off className="h-3 w-3 mr-1" />
-              Unlink
-            </Button>
-          </div>
-        ) : (
-          <div className="flex items-center gap-1">
-            <Input
-              value={extractName}
-              onChange={(e) => setExtractName(e.target.value)}
-              placeholder="Save as schema…"
-              className="h-7 w-[132px] text-xs bg-transparent"
-            />
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 text-xs"
-              type="button"
-              disabled={!extractName.trim()}
-              onClick={() => {
-                const name = extractName.trim();
-                onSpecChange(upsertComponentSchema(spec, name, resolved));
-                onChange({
-                  ...content,
-                  [activeType]: { ...content[activeType], schema: { $ref: componentRef("schemas", name) } },
-                });
-                setExtractName("");
-              }}
-            >
-              Save as $ref
-            </Button>
-          </div>
-        )}
+          <span className="inline-flex items-center gap-1 rounded-md bg-sky-500/10 px-1.5 py-0.5 text-[11px] font-medium text-sky-800 dark:text-sky-300">
+            <Link2 className="h-3 w-3" />
+            {refInfo.name}
+          </span>
+        ) : null}
         {layout === "compact" ? (
           <Tabs value={pane} onValueChange={(value) => setPane(value as typeof pane)}>
             <TabsList className="h-7">
@@ -353,42 +278,121 @@ const BodyEditor: React.FC<BodyEditorProps> = ({
             </TabsList>
           </Tabs>
         ) : null}
-        <Select
-          value={ROOT_TYPES.includes(rootType as (typeof ROOT_TYPES)[number]) ? rootType : "object"}
-          onValueChange={(value) => commitSchema(emptySchemaForType(value))}
-        >
-          <SelectTrigger className="h-7 w-[100px] bg-transparent text-[11px]">
-            <SelectValue placeholder="Type" />
-          </SelectTrigger>
-          <SelectContent>
-            {ROOT_TYPES.map((item) => (
-              <SelectItem key={item} value={item}>
-                {item}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Button variant="ghost" size="sm" className="h-7 text-xs" type="button" onClick={addField}>
+        <Button variant="outline" size="sm" className="h-7 text-xs" type="button" onClick={addField}>
           <Plus className="h-3 w-3 mr-1" />
           Add field
         </Button>
-        {onExpand ? (
-          <Button variant="ghost" size="sm" className="ml-auto h-6 px-2 text-[11px]" type="button" onClick={onExpand}>
-            <Maximize2 className="h-3 w-3 mr-1" />
-            Expand
-          </Button>
-        ) : (
-          <span className="ml-auto" />
-        )}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon-xs" type="button" className="ml-auto">
+              <MoreHorizontal className="h-4 w-4" />
+              <span className="sr-only">More body options</span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="min-w-52">
+            {onRequiredChange ? (
+              <DropdownMenuCheckboxItem checked={Boolean(required)} onCheckedChange={(value) => onRequiredChange(value === true)}>
+                Required
+              </DropdownMenuCheckboxItem>
+            ) : null}
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>Content type</DropdownMenuSubTrigger>
+              <DropdownMenuSubContent className="min-w-48">
+                <DropdownMenuRadioGroup
+                  value={activeType}
+                  onValueChange={(nextType) => {
+                    onChange({ [nextType]: content[activeType] });
+                    setContentType(nextType);
+                  }}
+                >
+                  {mediaOptions.map((item) => (
+                    <DropdownMenuRadioItem key={item} value={item} className="font-mono text-xs">
+                      {item}
+                    </DropdownMenuRadioItem>
+                  ))}
+                </DropdownMenuRadioGroup>
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>Root type</DropdownMenuSubTrigger>
+              <DropdownMenuSubContent>
+                <DropdownMenuRadioGroup
+                  value={ROOT_TYPES.includes(rootType as (typeof ROOT_TYPES)[number]) ? rootType : "object"}
+                  onValueChange={(value) => commitSchema(emptySchemaForType(value))}
+                >
+                  {ROOT_TYPES.map((item) => (
+                    <DropdownMenuRadioItem key={item} value={item}>
+                      {item}
+                    </DropdownMenuRadioItem>
+                  ))}
+                </DropdownMenuRadioGroup>
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+            <DropdownMenuSeparator />
+            {refInfo ? (
+              <>
+                <DropdownMenuLabel>Schema {refInfo.name}</DropdownMenuLabel>
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>Switch schema</DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent className="min-w-40">
+                    {schemaNames.map((name) => (
+                      <DropdownMenuItem
+                        key={name}
+                        onClick={() =>
+                          onChange({
+                            ...content,
+                            [activeType]: { ...content[activeType], schema: { $ref: componentRef("schemas", name) } },
+                          })
+                        }
+                      >
+                        {name}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+                <DropdownMenuItem
+                  onClick={() =>
+                    onChange({
+                      ...content,
+                      [activeType]: { ...content[activeType], schema: structuredClone(resolved) },
+                    })
+                  }
+                >
+                  Unlink (copy inline)
+                </DropdownMenuItem>
+              </>
+            ) : (
+              <DropdownMenuItem onClick={() => setSaveOpen(true)}>Save as schema…</DropdownMenuItem>
+            )}
+            <DropdownMenuItem
+              onClick={() => {
+                setPane("example");
+                inferFromExample();
+              }}
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              Infer fields from example
+            </DropdownMenuItem>
+            {onExpand ? (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={onExpand}>
+                  <Maximize2 className="h-3.5 w-3.5" />
+                  Expand
+                </DropdownMenuItem>
+              </>
+            ) : null}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </header>
       {layout === "compact" ? (
-        <div className="min-h-0 flex-1">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           {pane === "fields" ? fieldsPane : jsonPane(pane)}
         </div>
       ) : (
-        <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
+        <div className="grid min-h-0 flex-1 grid-cols-1 grid-rows-[minmax(0,1fr)] overflow-hidden lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
           {fieldsPane}
-          <div className="flex min-h-0 min-w-0 flex-col border-l border-border/50">
+          <div className="flex min-h-0 min-w-0 flex-col overflow-hidden lg:border-l lg:border-border/50">
             <div className="flex shrink-0 items-center px-3 pt-2">
               <Tabs value={pane === "fields" ? "example" : pane} onValueChange={(value) => setPane(value as typeof pane)}>
                 <TabsList className="h-7">
@@ -405,6 +409,38 @@ const BodyEditor: React.FC<BodyEditorProps> = ({
           </div>
         </div>
       )}
+      <Dialog open={saveOpen} onOpenChange={setSaveOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Save as schema</DialogTitle>
+            <DialogDescription>Stores this body in components.schemas and points the operation at a $ref.</DialogDescription>
+          </DialogHeader>
+          <Input
+            value={extractName}
+            onChange={(e) => setExtractName(e.target.value)}
+            placeholder="Pet"
+            className="h-8 text-sm"
+          />
+          <DialogFooter>
+            <Button
+              type="button"
+              disabled={!extractName.trim()}
+              onClick={() => {
+                const name = extractName.trim();
+                onSpecChange(upsertComponentSchema(spec, name, resolved));
+                onChange({
+                  ...content,
+                  [activeType]: { ...content[activeType], schema: { $ref: componentRef("schemas", name) } },
+                });
+                setExtractName("");
+                setSaveOpen(false);
+              }}
+            >
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 };
@@ -414,7 +450,7 @@ export const BodySchemaPanel: React.FC<BodySchemaPanelProps> = (props) => {
   const title = props.title ?? "Body";
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       {!fullscreen ? (
         <BodyEditor {...props} layout="compact" onExpand={() => setFullscreen(true)} />
       ) : (
