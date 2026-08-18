@@ -2,8 +2,8 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/geist";
-@import "@fontsource/instrument-serif/400.css";
-@import "@fontsource/instrument-serif/400-italic.css";
+/* Claude theme used to override heading typography with Instrument Serif. We keep
+   Geist everywhere to ensure consistent typography across themes. */
 
 @custom-variant dark (&:is(.dark *));
 
@@ -155,8 +155,6 @@ html[data-theme="claude"] {
     --sidebar-accent-foreground: #141413;
     --sidebar-border: #e6dfd8;
     --sidebar-ring: #c96442;
-    --font-heading: "Instrument Serif", "Iowan Old Style", Palatino, Georgia, serif;
-    --font-heading-family: "Instrument Serif", "Iowan Old Style", Palatino, Georgia, serif;
     color-scheme: light;
 }
 
@@ -195,11 +193,6 @@ html[data-theme="claude"].dark {
     color-scheme: dark;
 }
 
-html[data-theme="claude"] .font-heading {
-    letter-spacing: -0.02em;
-    font-weight: 400;
-}
-
 html[data-theme="claude-dusk"] {
     --background: #f5f4ed;
     --foreground: #141413;
@@ -233,8 +226,6 @@ html[data-theme="claude-dusk"] {
     --sidebar-accent-foreground: #141413;
     --sidebar-border: #e6dfd8;
     --sidebar-ring: #c96442;
-    --font-heading: "Instrument Serif", "Iowan Old Style", Palatino, Georgia, serif;
-    --font-heading-family: "Instrument Serif", "Iowan Old Style", Palatino, Georgia, serif;
     color-scheme: light;
 }
 
@@ -273,11 +264,6 @@ html[data-theme="claude-dusk"].dark {
     color-scheme: dark;
 }
 
-html[data-theme="claude-dusk"] .font-heading {
-    letter-spacing: -0.02em;
-    font-weight: 400;
-}
-
 html[data-theme="claude-twilight"] {
     --background: #f5f4ed;
     --foreground: #141413;
@@ -311,49 +297,42 @@ html[data-theme="claude-twilight"] {
     --sidebar-accent-foreground: #141413;
     --sidebar-border: #e6dfd8;
     --sidebar-ring: #c96442;
-    --font-heading: "Instrument Serif", "Iowan Old Style", Palatino, Georgia, serif;
-    --font-heading-family: "Instrument Serif", "Iowan Old Style", Palatino, Georgia, serif;
     color-scheme: light;
 }
 
 html[data-theme="claude-twilight"].dark {
-    --background: #272522;
+    --background: #26231f;
     --foreground: #f5f2eb;
-    --card: #312e2a;
+    --card: #3a352f;
     --card-foreground: #f5f2eb;
-    --popover: #363330;
+    --popover: #403b35;
     --popover-foreground: #f5f2eb;
     --primary: #d97757;
     --primary-foreground: #1a1917;
-    --secondary: #363330;
+    --secondary: #403b35;
     --secondary-foreground: #f5f2eb;
-    --muted: #363330;
-    --muted-foreground: #b8b2a8;
-    --accent: #3d3a36;
+    --muted: #403b35;
+    --muted-foreground: #d6d0c6;
+    --accent: #4a4741;
     --accent-foreground: #f5f2eb;
     --destructive: #e07070;
-    --border: #45413c;
-    --input: #45413c;
+    --border: #625d55;
+    --input: #625d55;
     --ring: #d97757;
     --chart-1: #d97757;
     --chart-2: #5db8a6;
     --chart-3: #e8a55a;
-    --chart-4: #b8b2a8;
+    --chart-4: #d6d0c6;
     --chart-5: #f5f2eb;
-    --sidebar: #201e1b;
+    --sidebar: #1f1c19;
     --sidebar-foreground: #f5f2eb;
     --sidebar-primary: #d97757;
     --sidebar-primary-foreground: #1a1917;
-    --sidebar-accent: #363330;
+    --sidebar-accent: #403b35;
     --sidebar-accent-foreground: #f5f2eb;
-    --sidebar-border: #45413c;
+    --sidebar-border: #625d55;
     --sidebar-ring: #d97757;
     color-scheme: dark;
-}
-
-html[data-theme="claude-twilight"] .font-heading {
-    letter-spacing: -0.02em;
-    font-weight: 400;
 }
 
 @layer base {

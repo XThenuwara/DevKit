@@ -463,6 +463,36 @@ export const addOperation = (spec: OpenAPIDoc, path: string, method: HttpMethod)
   return next;
 };
 
+export const renamePath = (spec: OpenAPIDoc, fromPath: string, toPath: string): OpenAPIDoc => {
+  const from = fromPath.trim();
+  const to = toPath.trim();
+  if (!from || !to || from === to) return spec;
+
+  const next = cloneSpec(spec);
+  next.paths ??= {};
+  if (!next.paths[from]) return spec;
+
+  const moved = cloneSpec(next.paths[from]);
+  const existing = next.paths[to];
+  next.paths[to] = existing && typeof existing === "object" ? { ...cloneSpec(existing), ...moved } : moved;
+  delete next.paths[from];
+
+  // Keep the user-defined operation ordering in sync with the path rename.
+  if (Array.isArray(next[OPERATION_ORDER_KEY])) {
+    next[OPERATION_ORDER_KEY] = (next[OPERATION_ORDER_KEY] as unknown[]).map((id) => {
+      if (typeof id !== "string") return id;
+      const colon = id.indexOf(":");
+      if (colon < 0) return id;
+      const method = id.slice(0, colon);
+      const p = id.slice(colon + 1);
+      if (p !== from) return id;
+      return `${method}:${to}`;
+    });
+  }
+
+  return next;
+};
+
 export const duplicateOperation = (
   spec: OpenAPIDoc,
   path: string,

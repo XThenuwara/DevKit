@@ -253,7 +253,7 @@ export const SwaggerView: React.FC<SwaggerViewProps> = ({ spec, path, method, on
 
   return (
     <div className="min-h-0 flex-1 overflow-y-auto bg-muted/15">
-      <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 p-4">
+      <div className="flex w-full flex-col gap-4 p-4">
         {!single ? (
           <header className="space-y-2 border-b border-border/60 pb-4">
             <div className="flex flex-wrap items-baseline gap-2">

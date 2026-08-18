@@ -37,6 +37,7 @@ import { SwaggerView } from "./swagger-view";
 import {
   SAMPLE_OPENAPI,
   addOperation,
+  renamePath,
   cloneSpec,
   collectOperationSchemaNames,
   collectPathCatalog,
@@ -122,7 +123,7 @@ const RequestEditor: React.FC<{
         <TabsList className="h-7">
           <TabsTrigger value="params" className="h-6 px-2.5 text-[11px]">Params</TabsTrigger>
           <TabsTrigger value="body" className="h-6 px-2.5 text-[11px]">Body</TabsTrigger>
-          <TabsTrigger value="preview" className="h-6 px-2.5 text-[11px]">Preview</TabsTrigger>
+          <TabsTrigger value="preview" className="h-6 px-2.5 text-[11px]">Swagger</TabsTrigger>
           <TabsTrigger value="yaml" className="h-6 px-2.5 text-[11px]">Source</TabsTrigger>
           <TabsTrigger value="docs" className="h-6 px-2.5 text-[11px]">Docs</TabsTrigger>
         </TabsList>
@@ -183,7 +184,7 @@ const RequestEditor: React.FC<{
         {tab === "docs" ? (
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
             <div className="min-h-0 flex-1 overflow-y-auto p-4">
-              <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
+              <div className="flex w-full flex-col gap-4">
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div className="flex flex-col gap-1.5">
                     <FieldLabel>Summary</FieldLabel>
@@ -548,6 +549,7 @@ export const OpenApiTool: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<{ path: string; method: HttpMethod } | null>(null);
+  const [pathDraft, setPathDraft] = useState("");
   const [newPath, setNewPath] = useState("/");
   const [newMethod, setNewMethod] = useState<HttpMethod>("get");
   const [pathSuggestOpen, setPathSuggestOpen] = useState(false);
@@ -600,6 +602,10 @@ export const OpenApiTool: React.FC = () => {
     setError(null);
     if (resetBaseline) setBaselineSpec(cloneSpec(next));
   };
+
+  useEffect(() => {
+    if (selected?.path) setPathDraft(selected.path);
+  }, [selected?.path]);
 
   const loadText = (text: string, keepSelection = false) => {
     try {
@@ -813,10 +819,36 @@ export const OpenApiTool: React.FC = () => {
               <span className={`rounded-md px-2 py-1 text-[11px] font-extrabold uppercase ${METHOD_CHIP[selected.method]}`}>
                 {selected.method}
               </span>
-              <div className="flex min-w-0 flex-1 items-center rounded-md border border-border bg-background px-2.5 py-1.5">
-                <span className="truncate font-mono text-xs">{selected.path}</span>
+              <div className="flex min-w-0 flex-1 items-center gap-2 rounded-md border border-border bg-background px-2 py-1.5">
+                <Input
+                  value={pathDraft}
+                  onChange={(e) => setPathDraft(e.target.value)}
+                  className="h-7 text-[11px] font-mono bg-transparent"
+                  onBlur={() => {
+                    if (!spec) return;
+                    const nextPath = pathDraft.trim();
+                    const normalized = nextPath.startsWith("/") ? nextPath : `/${nextPath}`;
+                    if (normalized && normalized !== selected.path) {
+                      applySpec(renamePath(spec, selected.path, normalized));
+                      setSelected({ path: normalized, method: selected.method });
+                    } else {
+                      setPathDraft(selected.path);
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key !== "Enter") return;
+                    e.preventDefault();
+                    if (!spec) return;
+                    const nextPath = pathDraft.trim();
+                    const normalized = nextPath.startsWith("/") ? nextPath : `/${nextPath}`;
+                    if (normalized && normalized !== selected.path) {
+                      applySpec(renamePath(spec, selected.path, normalized));
+                      setSelected({ path: normalized, method: selected.method });
+                    }
+                  }}
+                />
                 {current?.summary ? (
-                  <span className="ml-2 hidden truncate text-[11px] text-muted-foreground sm:inline">
+                  <span className="hidden truncate text-[11px] text-muted-foreground sm:inline">
                     · {current.summary}
                   </span>
                 ) : null}

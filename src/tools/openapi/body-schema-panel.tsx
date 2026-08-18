@@ -238,20 +238,15 @@ const BodyEditor: React.FC<BodyEditorProps> = ({
             className="h-full rounded-none border-0"
           />
         ) : (
-          <CodeEditor
-            value={schemaDraft}
-            onChange={(value) => {
-              setSchemaDraft(value);
-              try {
-                commitSchema(JSON.parse(value) as SchemaObject);
-              } catch {
-                /* keep typing */
-              }
-            }}
-            language="json"
-            height="100%"
-            className="h-full rounded-none border-0"
-          />
+          <div className="h-full min-h-0 flex-1 overflow-hidden">
+            <SchemaCrumbEditor
+              spec={spec}
+              schema={rawSchema ?? resolved}
+              onChange={commitSchema}
+              onSpecChange={onSpecChange}
+              rootLabel={refInfo?.name ?? title}
+            />
+          </div>
         )}
       </div>
     </div>
