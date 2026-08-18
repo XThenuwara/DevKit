@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { MoreHorizontal, Plus, Trash2 } from "lucide-react";
+import { Maximize2, MoreHorizontal, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -385,12 +385,18 @@ export const ParametersPanel: React.FC<{
     else props.onOpChange([...props.opParams, param]);
   };
 
-  const renderAddToolbar = () => (
+  const renderAddToolbar = (showExpand = false) => (
     <div className="flex items-center gap-1">
       <Button variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={() => add("query")} type="button">
         <Plus className="h-3 w-3 mr-1" />
         Add field
       </Button>
+      {showExpand ? (
+        <Button variant="ghost" size="icon-xs" type="button" onClick={() => setFullscreen(true)} title="Expand">
+          <Maximize2 className="h-3.5 w-3.5" />
+          <span className="sr-only">Expand</span>
+        </Button>
+      ) : null}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="icon-xs" type="button">
@@ -420,8 +426,6 @@ export const ParametersPanel: React.FC<{
               ))}
             </>
           ) : null}
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => setFullscreen(true)}>Expand</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     </div>
@@ -432,13 +436,13 @@ export const ParametersPanel: React.FC<{
       <header className="flex shrink-0 items-center justify-between gap-2 border-b border-border/60 px-3 py-2">
         <h3 className="text-[11px] font-bold uppercase tracking-wider text-foreground">Parameters</h3>
         <div className="flex items-center gap-1">
-          {renderAddToolbar()}
+          {renderAddToolbar(true)}
           <FullscreenModal
             title="Parameters"
             open={fullscreen}
             onOpenChange={setFullscreen}
             showTrigger={false}
-            headerAction={renderAddToolbar()}
+            headerAction={renderAddToolbar(false)}
           >
             <ParametersTable {...props} onAdd={add} />
           </FullscreenModal>

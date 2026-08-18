@@ -190,7 +190,7 @@ const BodyEditor: React.FC<BodyEditorProps> = ({
 
   const fieldsPane = (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      <SchemaTreeEditor spec={spec} schema={resolved} onChange={commitSchema} onSpecChange={onSpecChange} />
+      <SchemaTreeEditor spec={spec} schema={rawSchema ?? resolved} onChange={commitSchema} onSpecChange={onSpecChange} />
     </div>
   );
 
@@ -282,13 +282,20 @@ const BodyEditor: React.FC<BodyEditorProps> = ({
           <Plus className="h-3 w-3 mr-1" />
           Add field
         </Button>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon-xs" type="button" className="ml-auto">
-              <MoreHorizontal className="h-4 w-4" />
-              <span className="sr-only">More body options</span>
+        <div className="ml-auto flex items-center gap-0.5">
+          {onExpand ? (
+            <Button variant="ghost" size="icon-xs" type="button" onClick={onExpand} title="Expand">
+              <Maximize2 className="h-3.5 w-3.5" />
+              <span className="sr-only">Expand</span>
             </Button>
-          </DropdownMenuTrigger>
+          ) : null}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon-xs" type="button">
+                <MoreHorizontal className="h-4 w-4" />
+                <span className="sr-only">More body options</span>
+              </Button>
+            </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="min-w-52">
             {onRequiredChange ? (
               <DropdownMenuCheckboxItem checked={Boolean(required)} onCheckedChange={(value) => onRequiredChange(value === true)}>
@@ -373,17 +380,9 @@ const BodyEditor: React.FC<BodyEditorProps> = ({
               <Sparkles className="h-3.5 w-3.5" />
               Infer fields from example
             </DropdownMenuItem>
-            {onExpand ? (
-              <>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={onExpand}>
-                  <Maximize2 className="h-3.5 w-3.5" />
-                  Expand
-                </DropdownMenuItem>
-              </>
-            ) : null}
           </DropdownMenuContent>
         </DropdownMenu>
+        </div>
       </header>
       {layout === "compact" ? (
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">

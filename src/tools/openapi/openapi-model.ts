@@ -734,22 +734,31 @@ export const schemaType = (schema?: SchemaObject): string => {
 export const collectSchemaNames = (spec: OpenAPIDoc): string[] =>
   Object.keys(spec.components?.schemas ?? {}).sort((a, b) => a.localeCompare(b));
 
-const walkSchemaRefs = (schema: SchemaObject | undefined, acc: Set<string>) => {
+const walkSchemaRefs = (
+  spec: OpenAPIDoc,
+  schema: SchemaObject | undefined,
+  acc: Set<string>,
+  seen = new Set<string>(),
+) => {
   if (!schema) return;
   if (schema.$ref) {
     const parsed = parseComponentRef(schema.$ref);
-    if (parsed?.group === "schemas") acc.add(parsed.name);
+    if (parsed?.group === "schemas" && !seen.has(parsed.name)) {
+      seen.add(parsed.name);
+      acc.add(parsed.name);
+      walkSchemaRefs(spec, spec.components?.schemas?.[parsed.name], acc, seen);
+    }
     return;
   }
-  if (schema.items) walkSchemaRefs(schema.items, acc);
+  if (schema.items) walkSchemaRefs(spec, schema.items, acc, seen);
   if (schema.properties) {
-    for (const child of Object.values(schema.properties)) walkSchemaRefs(child, acc);
+    for (const child of Object.values(schema.properties)) walkSchemaRefs(spec, child, acc, seen);
   }
   if (schema.additionalProperties && typeof schema.additionalProperties === "object") {
-    walkSchemaRefs(schema.additionalProperties, acc);
+    walkSchemaRefs(spec, schema.additionalProperties, acc, seen);
   }
   for (const union of [schema.oneOf, schema.anyOf, schema.allOf]) {
-    union?.forEach((child) => walkSchemaRefs(child, acc));
+    union?.forEach((child) => walkSchemaRefs(spec, child, acc, seen));
   }
 };
 
@@ -766,18 +775,18 @@ export const collectOperationSchemaNames = (
   const params = [...(pathItem?.parameters ?? []), ...(operation.parameters ?? [])];
   for (const param of params) {
     const resolved = resolveRef<ParameterObject>(spec, param);
-    walkSchemaRefs(resolved?.schema, names);
+    walkSchemaRefs(spec, resolved?.schema, names);
   }
 
   const body = resolveRef<RequestBodyObject>(spec, operation.requestBody);
   for (const media of Object.values(body?.content ?? {})) {
-    walkSchemaRefs(media.schema, names);
+    walkSchemaRefs(spec, media.schema, names);
   }
 
   for (const response of Object.values(operation.responses ?? {})) {
     const resolved = resolveRef<ResponseObject>(spec, response);
     for (const media of Object.values(resolved?.content ?? {})) {
-      walkSchemaRefs(media.schema, names);
+      walkSchemaRefs(spec, media.schema, names);
     }
   }
 
@@ -941,62 +950,71 @@ export const generateExampleFromSchema = (
   return PRIMITIVE_EXAMPLES[type] ?? null;
 };
 
-export const inlineSchemaRefs = (
+type ComponentGroup = "schemas" | "parameters" | "requestBodies" | "responses";
+
+const componentWriteKey = (group: ComponentGroup, name: string) => `${group}:${name}`;
+
+const lookupComponent = (
   spec: OpenAPIDoc,
-  schema: SchemaObject | undefined,
-  seen = new Set<string>(),
-): SchemaObject | undefined => {
-  if (!schema) return undefined;
-  if (schema.$ref) {
-    const parsed = parseComponentRef(schema.$ref);
-    if (!parsed || parsed.group !== "schemas") return schema;
-    if (seen.has(parsed.name)) return schema;
-    seen.add(parsed.name);
-    const resolved = spec.components?.schemas?.[parsed.name];
-    if (!resolved) return schema;
-    const inlined = inlineSchemaRefs(spec, cloneSpec(resolved), seen);
-    return inlined ? { ...inlined, title: inlined.title ?? parsed.name } : schema;
-  }
-  const next: SchemaObject = { ...schema };
-  if (schema.properties) {
-    next.properties = {};
-    for (const [key, child] of Object.entries(schema.properties)) {
-      next.properties[key] = inlineSchemaRefs(spec, child, new Set(seen)) ?? child;
-    }
-  }
-  if (schema.items) next.items = inlineSchemaRefs(spec, schema.items, new Set(seen)) ?? schema.items;
-  if (schema.additionalProperties && typeof schema.additionalProperties === "object") {
-    next.additionalProperties =
-      inlineSchemaRefs(spec, schema.additionalProperties, new Set(seen)) ?? schema.additionalProperties;
-  }
-  for (const key of ["oneOf", "anyOf", "allOf"] as const) {
-    if (schema[key]) {
-      next[key] = schema[key]!.map((child) => inlineSchemaRefs(spec, child, new Set(seen)) ?? child);
-    }
-  }
-  return next;
+  writes: Map<string, unknown>,
+  group: ComponentGroup,
+  name: string,
+) => {
+  const key = componentWriteKey(group, name);
+  if (writes.has(key)) return writes.get(key);
+  return spec.components?.[group]?.[name];
 };
 
-const inlineValueRefs = (spec: OpenAPIDoc, value: unknown, seen = new Set<string>()): unknown => {
-  if (!value || typeof value !== "object") return value;
-  if (Array.isArray(value)) return value.map((item) => inlineValueRefs(spec, item, seen));
-  if (isRef(value) && "$ref" in value && !("type" in value)) {
-    const parsed = parseComponentRef(value.$ref);
-    if (parsed?.group === "schemas") {
-      const resolved = spec.components?.schemas?.[parsed.name];
-      if (resolved) return inlineSchemaRefs(spec, resolved, seen) ?? value;
-    }
-    return value;
+const reattachRefs = (
+  previous: unknown,
+  incoming: unknown,
+  spec: OpenAPIDoc,
+  writes: Map<string, unknown>,
+  skipWrites: Set<string>,
+): unknown => {
+  if (!incoming || typeof incoming !== "object") return incoming;
+  if (!previous || typeof previous !== "object") return incoming;
+
+  if (Array.isArray(incoming)) {
+    if (!Array.isArray(previous)) return incoming;
+    return incoming.map((item, index) => reattachRefs(previous[index], item, spec, writes, skipWrites));
   }
-  const out: Record<string, unknown> = {};
-  for (const [key, child] of Object.entries(value)) {
-    if (key === "schema" && child && typeof child === "object") {
-      out[key] = inlineSchemaRefs(spec, child as SchemaObject, seen) ?? child;
-    } else {
-      out[key] = inlineValueRefs(spec, child, seen);
+
+  const prevObj = previous as Record<string, unknown>;
+  const nextObj = incoming as Record<string, unknown>;
+
+  if (typeof prevObj.$ref === "string" && typeof nextObj.$ref !== "string") {
+    const parsed = parseComponentRef(prevObj.$ref);
+    if (parsed) {
+      const key = componentWriteKey(parsed.group, parsed.name);
+      const existing = lookupComponent(spec, writes, parsed.group, parsed.name);
+      const merged = reattachRefs(existing, nextObj, spec, writes, skipWrites);
+      if (!skipWrites.has(key)) writes.set(key, merged);
+      return { $ref: prevObj.$ref };
+    }
+  }
+
+  const out: Record<string, unknown> = { ...nextObj };
+  for (const [key, child] of Object.entries(nextObj)) {
+    if (key in prevObj) {
+      out[key] = reattachRefs(prevObj[key], child, spec, writes, skipWrites);
     }
   }
   return out;
+};
+
+const applyComponentWrites = (spec: OpenAPIDoc, writes: Map<string, unknown>): OpenAPIDoc => {
+  if (writes.size === 0) return spec;
+  const next = cloneSpec(spec);
+  next.components ??= {};
+  for (const [key, value] of writes) {
+    const [group, ...nameParts] = key.split(":");
+    const name = nameParts.join(":");
+    const bag = group as ComponentGroup;
+    next.components[bag] ??= {};
+    (next.components[bag] as Record<string, unknown>)[name] = value as never;
+  }
+  return next;
 };
 
 export const buildOperationView = (spec: OpenAPIDoc, path: string, method: HttpMethod) => {
@@ -1005,15 +1023,8 @@ export const buildOperationView = (spec: OpenAPIDoc, path: string, method: HttpM
   if (!pathItem || !operation) return {};
 
   const pathEntry: PathItemObject = {};
-  if (pathItem.parameters?.length) {
-    pathEntry.parameters = cloneSpec(pathItem.parameters).map((param) => {
-      const resolved = resolveRef<ParameterObject>(spec, param) ?? param;
-      return inlineValueRefs(spec, resolved) as ParameterObject;
-    });
-  }
-
-  const inlinedOp = inlineValueRefs(spec, cloneSpec(operation)) as OperationObject;
-  pathEntry[method] = inlinedOp;
+  if (pathItem.parameters?.length) pathEntry.parameters = cloneSpec(pathItem.parameters);
+  pathEntry[method] = cloneSpec(operation);
 
   const schemaNames = collectOperationSchemaNames(spec, path, method);
   const view: Record<string, unknown> = { [path]: pathEntry };
@@ -1021,7 +1032,7 @@ export const buildOperationView = (spec: OpenAPIDoc, path: string, method: HttpM
     const schemas: Record<string, SchemaObject> = {};
     for (const name of schemaNames) {
       const schema = spec.components?.schemas?.[name];
-      if (schema) schemas[name] = inlineSchemaRefs(spec, cloneSpec(schema)) ?? schema;
+      if (schema) schemas[name] = cloneSpec(schema);
     }
     view.components = { schemas };
   }
@@ -1053,10 +1064,7 @@ export const mergeOperationView = (
     throw new Error("Snippet must be an object.");
   }
 
-  let next = cloneSpec(spec);
-  const pathKey =
-    Object.keys(parsed).find((key) => key.startsWith("/")) ??
-    path;
+  const pathKey = Object.keys(parsed).find((key) => key.startsWith("/")) ?? path;
   const pathItem = parsed[pathKey] as PathItemObject | undefined;
   if (!pathItem || typeof pathItem !== "object") {
     throw new Error(`Missing path entry "${pathKey}".`);
@@ -1067,21 +1075,36 @@ export const mergeOperationView = (
     throw new Error(`Missing ${method.toUpperCase()} operation under "${pathKey}".`);
   }
 
-  const components = parsed.components as { schemas?: Record<string, SchemaObject> } | undefined;
-  if (components?.schemas) {
-    for (const [name, schema] of Object.entries(components.schemas)) {
-      next = upsertComponentSchema(next, name, schema);
+  const writes = new Map<string, unknown>();
+  const incomingSchemas = parsed.components as { schemas?: Record<string, SchemaObject> } | undefined;
+  const skipWrites = new Set<string>();
+  if (incomingSchemas?.schemas) {
+    for (const name of Object.keys(incomingSchemas.schemas)) {
+      skipWrites.add(componentWriteKey("schemas", name));
+    }
+    for (const [name, schema] of Object.entries(incomingSchemas.schemas)) {
+      const existing = spec.components?.schemas?.[name];
+      writes.set(
+        componentWriteKey("schemas", name),
+        reattachRefs(existing, schema, spec, writes, skipWrites),
+      );
     }
   }
 
+  const previousPath = spec.paths?.[pathKey] ?? spec.paths?.[path];
+  const previousOp = getOperation(spec, pathKey, method) ?? getOperation(spec, path, method);
   const { parameters, ...operationRest } = pathItem;
   void operationRest;
 
-  next = updatePathItem(next, pathKey, (item) => ({
-    ...item,
-    ...(parameters ? { parameters: cloneSpec(parameters) } : {}),
-  }));
+  const nextParameters = parameters
+    ? (reattachRefs(previousPath?.parameters, cloneSpec(parameters), spec, writes, skipWrites) as ParameterObject[])
+    : undefined;
+  const nextOperation = reattachRefs(previousOp, cloneSpec(operation), spec, writes, skipWrites) as OperationObject;
 
-  next = updateOperation(next, pathKey, method, () => cloneSpec(operation));
+  let next = applyComponentWrites(spec, writes);
+  if (nextParameters) {
+    next = updatePathItem(next, pathKey, (item) => ({ ...item, parameters: nextParameters }));
+  }
+  next = updateOperation(next, pathKey, method, () => nextOperation);
   return next;
 };
