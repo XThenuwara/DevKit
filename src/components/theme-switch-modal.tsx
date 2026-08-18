@@ -29,7 +29,7 @@ export const ThemeSwitchModal: React.FC<ThemeSwitchModalProps> = ({ open, onOpen
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         showCloseButton
-        className="gap-5 rounded-2xl border-border/60 p-5 sm:max-w-md"
+        className="gap-5 rounded-2xl border-border/60 p-5 sm:max-w-lg"
       >
         <DialogHeader className="gap-1.5">
           <DialogTitle className="font-heading text-lg tracking-tight">Appearance</DialogTitle>
@@ -38,7 +38,7 @@ export const ThemeSwitchModal: React.FC<ThemeSwitchModalProps> = ({ open, onOpen
 
         <div className="flex flex-col gap-2">
           <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Theme</p>
-          <div className="grid grid-cols-2 gap-2.5">
+          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
             {PALETTES.map((item) => {
               const selected = palette === item.id;
               const swatch = item.preview[resolvedMode];

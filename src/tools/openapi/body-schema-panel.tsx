@@ -20,7 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CodeEditor } from "./code-editor";
 import { FullscreenModal } from "./fullscreen-modal";
-import { SchemaTreeEditor } from "./schema-tree-editor";
+import { SchemaCrumbEditor } from "./schema-crumb-editor";
 import { CopyButton } from "@/components/shared/copy-button";
 import {
   COMMON_MEDIA_TYPES,
@@ -190,7 +190,13 @@ const BodyEditor: React.FC<BodyEditorProps> = ({
 
   const fieldsPane = (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      <SchemaTreeEditor spec={spec} schema={rawSchema ?? resolved} onChange={commitSchema} onSpecChange={onSpecChange} />
+      <SchemaCrumbEditor
+        spec={spec}
+        schema={rawSchema ?? resolved}
+        onChange={commitSchema}
+        onSpecChange={onSpecChange}
+        rootLabel={refInfo?.name ?? title}
+      />
     </div>
   );
 

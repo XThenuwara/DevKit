@@ -31,7 +31,7 @@ import { EndpointSidebar } from "./endpoint-sidebar";
 import { ExportDialog } from "./export-dialog";
 import { OperationYamlPanel } from "./operation-yaml-panel";
 import { ParametersPanel } from "./parameters-panel";
-import { SchemaVisualEditor } from "./schema-visual-editor";
+import { SchemaCrumbEditor } from "./schema-crumb-editor";
 import { SuggestMenu } from "./suggest-menu";
 import {
   SAMPLE_OPENAPI,
@@ -177,72 +177,74 @@ const RequestEditor: React.FC<{
         ) : null}
         {tab === "docs" ? (
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-            <div className="mx-auto flex h-full min-h-0 w-full max-w-2xl flex-1 flex-col gap-4 overflow-y-auto p-4">
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="min-h-0 flex-1 overflow-y-auto p-4">
+              <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div className="flex flex-col gap-1.5">
+                    <FieldLabel>Summary</FieldLabel>
+                    <Input
+                      value={operation.summary ?? ""}
+                      onChange={(e) => patchOp({ ...operation, summary: e.target.value })}
+                      className="h-8 text-xs"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <FieldLabel>Operation ID</FieldLabel>
+                    <Input
+                      value={operation.operationId ?? ""}
+                      onChange={(e) => patchOp({ ...operation, operationId: e.target.value })}
+                      className="h-8 text-xs font-mono"
+                    />
+                  </div>
+                </div>
                 <div className="flex flex-col gap-1.5">
-                  <FieldLabel>Summary</FieldLabel>
+                  <FieldLabel>Tags</FieldLabel>
                   <Input
-                    value={operation.summary ?? ""}
-                    onChange={(e) => patchOp({ ...operation, summary: e.target.value })}
+                    value={(operation.tags ?? []).join(", ")}
+                    onChange={(e) =>
+                      patchOp({
+                        ...operation,
+                        tags: e.target.value.split(",").map((item) => item.trim()).filter(Boolean),
+                      })
+                    }
                     className="h-8 text-xs"
                   />
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <FieldLabel>Operation ID</FieldLabel>
-                  <Input
-                    value={operation.operationId ?? ""}
-                    onChange={(e) => patchOp({ ...operation, operationId: e.target.value })}
-                    className="h-8 text-xs font-mono"
+                  <FieldLabel>Description</FieldLabel>
+                  <Textarea
+                    value={operation.description ?? ""}
+                    onChange={(e) => patchOp({ ...operation, description: e.target.value })}
+                    className="min-h-[140px] text-xs"
                   />
                 </div>
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <FieldLabel>Tags</FieldLabel>
-                <Input
-                  value={(operation.tags ?? []).join(", ")}
-                  onChange={(e) =>
-                    patchOp({
-                      ...operation,
-                      tags: e.target.value.split(",").map((item) => item.trim()).filter(Boolean),
-                    })
-                  }
-                  className="h-8 text-xs"
-                />
-              </div>
-              <div className="flex min-h-0 flex-1 flex-col gap-1.5">
-                <FieldLabel>Description</FieldLabel>
-                <Textarea
-                  value={operation.description ?? ""}
-                  onChange={(e) => patchOp({ ...operation, description: e.target.value })}
-                  className="min-h-[160px] flex-1 resize-none text-xs"
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id="operation-deprecated"
-                  checked={Boolean(operation.deprecated)}
-                  onCheckedChange={(value) => patchOp({ ...operation, deprecated: value === true })}
-                />
-                <Label htmlFor="operation-deprecated" className="text-xs font-medium">
-                  Deprecated
-                </Label>
-              </div>
-              {related.length > 0 ? (
-                <div className="flex flex-col gap-3 pt-2">
-                  <FieldLabel>Linked schemas</FieldLabel>
-                  {related.map((name) => (
-                    <div key={name} className="space-y-1.5">
-                      <p className="text-xs font-mono font-semibold">{name}</p>
-                      <SchemaVisualEditor
-                        spec={spec}
-                        schema={{ $ref: componentRef("schemas", name) }}
-                        onChange={() => undefined}
-                        onSpecChange={onSpecChange}
-                      />
-                    </div>
-                  ))}
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="operation-deprecated"
+                    checked={Boolean(operation.deprecated)}
+                    onCheckedChange={(value) => patchOp({ ...operation, deprecated: value === true })}
+                  />
+                  <Label htmlFor="operation-deprecated" className="text-xs font-medium">
+                    Deprecated
+                  </Label>
                 </div>
-              ) : null}
+                {related.length > 0 ? (
+                  <div className="flex flex-col gap-3 pt-1">
+                    <FieldLabel>Linked schemas</FieldLabel>
+                    {related.map((name) => (
+                      <div key={name} className="flex h-[320px] min-h-[240px] flex-col overflow-hidden rounded-lg border border-border bg-background">
+                        <SchemaCrumbEditor
+                          spec={spec}
+                          schema={{ $ref: componentRef("schemas", name) }}
+                          onChange={() => undefined}
+                          onSpecChange={onSpecChange}
+                          rootLabel={name}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
             </div>
           </div>
         ) : null}
@@ -509,17 +511,15 @@ const SpecOverview: React.FC<{
               <p className="text-xs text-muted-foreground">None yet. Save a body as $ref from an endpoint.</p>
             ) : (
               schemaNames.map((name) => (
-                <details key={name} className="rounded-md border border-border bg-muted/30">
-                  <summary className="cursor-pointer px-3 py-2 text-xs font-mono font-bold">{name}</summary>
-                  <div className="border-t border-border p-2">
-                    <SchemaVisualEditor
-                      spec={spec}
-                      schema={{ $ref: componentRef("schemas", name) }}
-                      onChange={() => undefined}
-                      onSpecChange={onSpecChange}
-                    />
-                  </div>
-                </details>
+                <div key={name} className="flex h-[280px] min-h-[220px] flex-col overflow-hidden rounded-md border border-border bg-background">
+                  <SchemaCrumbEditor
+                    spec={spec}
+                    schema={{ $ref: componentRef("schemas", name) }}
+                    onChange={() => undefined}
+                    onSpecChange={onSpecChange}
+                    rootLabel={name}
+                  />
+                </div>
               ))
             )}
           </Section>

@@ -1,4 +1,4 @@
-export type ThemePalette = "stone" | "claude";
+export type ThemePalette = "stone" | "claude" | "claude-dusk";
 export type ThemeMode = "light" | "dark" | "system";
 export type ResolvedMode = "light" | "dark";
 
@@ -38,10 +38,19 @@ export const PALETTES: PaletteOption[] = [
       dark: { bg: "#141413", card: "#1f1e1b", accent: "#d97757", ink: "#faf9f5" },
     },
   },
+  {
+    id: "claude-dusk",
+    name: "Claude Dusk",
+    description: "Same cream in light. A lifted charcoal dark instead of ink.",
+    preview: {
+      light: { bg: "#f5f4ed", card: "#faf9f5", accent: "#c96442", ink: "#141413" },
+      dark: { bg: "#3a3732", card: "#45423c", accent: "#d97757", ink: "#f7f4ee" },
+    },
+  },
 ];
 
 export const isPalette = (value: string | null): value is ThemePalette =>
-  value === "stone" || value === "claude";
+  value === "stone" || value === "claude" || value === "claude-dusk";
 
 export const isMode = (value: string | null): value is ThemeMode =>
   value === "light" || value === "dark" || value === "system";
