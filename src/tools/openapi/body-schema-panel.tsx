@@ -87,6 +87,58 @@ const BodyEditor: React.FC<BodyEditorProps> = ({
     return rawSchema;
   }, [rawSchema, spec]);
 
+  // When viewing schema JSON, we can switch the “target” schema that the editor
+  // shows/edits (useful for drilling into linked $refs).
+  const [schemaTargetName, setSchemaTargetName] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Only reset the target when changing the pane; schema selection stays
+    // stable while the user is browsing linked models.
+    if (pane !== "schema") {
+      setSchemaTargetName(null);
+      return;
+    }
+    setSchemaTargetName(refInfo?.group === "schemas" ? refInfo.name : null);
+  }, [pane, refInfo?.group, refInfo?.name]);
+
+  const linkedSchemaNames = useMemo(() => {
+    const out = new Set<string>();
+    const seen = new Set<string>();
+
+    const walk = (node: SchemaObject | undefined) => {
+      if (!node) return;
+      if (node.$ref) {
+        const parsed = parseComponentRef(node.$ref);
+        if (parsed?.group === "schemas") {
+          out.add(parsed.name);
+          if (!seen.has(parsed.name)) {
+            seen.add(parsed.name);
+            const resolvedModel = spec.components?.schemas?.[parsed.name];
+            walk(resolvedModel);
+          }
+        }
+        return;
+      }
+      if (node.items) walk(node.items);
+      if (node.properties) {
+        for (const child of Object.values(node.properties)) walk(child);
+      }
+      if (node.additionalProperties && typeof node.additionalProperties === "object") {
+        walk(node.additionalProperties as SchemaObject);
+      }
+      for (const union of [node.oneOf, node.anyOf, node.allOf]) {
+        union?.forEach((child) => walk(child));
+      }
+    };
+
+    walk(rawSchema ?? resolved);
+    return [...out].sort((a, b) => a.localeCompare(b));
+  }, [rawSchema, resolved, spec]);
+
+  const schemaForTarget = schemaTargetName
+    ? spec.components?.schemas?.[schemaTargetName] ?? resolved
+    : resolved;
+
   const example = useMemo(() => {
     const explicit = content?.[activeType]?.example;
     if (explicit !== undefined) return explicit;
@@ -94,7 +146,7 @@ const BodyEditor: React.FC<BodyEditorProps> = ({
   }, [activeType, content, rawSchema, resolved, spec]);
 
   const exampleText = JSON.stringify(example ?? {}, null, 2);
-  const schemaJson = JSON.stringify(resolved ?? {}, null, 2);
+  const schemaJson = JSON.stringify(schemaForTarget ?? {}, null, 2);
   const rootType = schemaType(resolved);
   const mediaOptions = useMemo(() => {
     const set = new Set<string>(COMMON_MEDIA_TYPES);
@@ -110,9 +162,11 @@ const BodyEditor: React.FC<BodyEditorProps> = ({
     setSchemaDraft(schemaJson);
   }, [schemaJson]);
 
-  const commitSchema = (next: SchemaObject) => {
-    if (refInfo?.group === "schemas") {
-      onSpecChange(upsertComponentSchema(spec, refInfo.name, next));
+  const commitSchema = (next: SchemaObject, targetName?: string | null) => {
+    const target =
+      targetName ?? schemaTargetName ?? (refInfo?.group === "schemas" ? refInfo.name : null);
+    if (target) {
+      onSpecChange(upsertComponentSchema(spec, target, next));
       return;
     }
     onChange({
@@ -204,8 +258,12 @@ const BodyEditor: React.FC<BodyEditorProps> = ({
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       <div className="flex shrink-0 items-center justify-between gap-2 px-3 py-1.5">
         <p className="text-[10px] text-muted-foreground">
-          {view === "schema" && refInfo
-            ? `Resolved schema ${refInfo.name}`
+          {view === "schema"
+            ? schemaTargetName
+              ? `Editing schema ${schemaTargetName}`
+              : refInfo
+                ? `Resolved schema ${refInfo.name}`
+                : "Schema JSON"
             : view === "example"
               ? "Request/response example JSON"
               : "Schema JSON"}
@@ -238,14 +296,52 @@ const BodyEditor: React.FC<BodyEditorProps> = ({
             className="h-full rounded-none border-0"
           />
         ) : (
-          <div className="h-full min-h-0 flex-1 overflow-hidden">
-            <SchemaCrumbEditor
-              spec={spec}
-              schema={rawSchema ?? resolved}
-              onChange={commitSchema}
-              onSpecChange={onSpecChange}
-              rootLabel={refInfo?.name ?? title}
-            />
+          <div className="flex h-full min-h-0 flex-1 overflow-hidden">
+            <div className="relative min-h-0 flex-1">
+              <CodeEditor
+                value={schemaDraft}
+                onChange={(value) => {
+                  setSchemaDraft(value);
+                  try {
+                    commitSchema(JSON.parse(value) as SchemaObject, schemaTargetName);
+                  } catch {
+                    /* keep typing */
+                  }
+                }}
+                language="json"
+                height="100%"
+                className="h-full rounded-none border-0"
+              />
+            </div>
+
+            {linkedSchemaNames.length > 0 ? (
+              <aside className="w-[240px] shrink-0 border-l border-border/50 bg-background/30 flex min-h-0 flex-col">
+                <div className="shrink-0 border-b border-border/60 px-3 py-2">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                    Linked schemas
+                  </p>
+                </div>
+                <div className="min-h-0 flex-1 overflow-auto p-2 space-y-1.5">
+                  {linkedSchemaNames.map((name) => {
+                    const active = schemaTargetName === name;
+                    return (
+                      <button
+                        key={name}
+                        type="button"
+                        className={`w-full rounded-md border px-2 py-1 text-left text-xs font-mono ${
+                          active
+                            ? "bg-muted/50 border-border"
+                            : "bg-background/0 border-transparent hover:bg-muted/20 hover:border-border/60"
+                        }`}
+                        onClick={() => setSchemaTargetName(name)}
+                      >
+                        {name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </aside>
+            ) : null}
           </div>
         )}
       </div>

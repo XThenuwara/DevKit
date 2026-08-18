@@ -358,6 +358,11 @@ export const SchemaCrumbEditor: React.FC<SchemaCrumbEditorProps> = ({
     (root.$ref ? parseComponentRef(root.$ref)?.name : undefined) ??
     "Schema";
 
+  // When drilling deeper, subtly lift the background so nested component levels are
+  // easier to distinguish in dark themes.
+  const depth = path.length;
+  const depthBgClass = depth >= 4 ? "bg-muted/20" : depth >= 2 ? "bg-muted/15" : depth >= 1 ? "bg-muted/10" : "bg-transparent";
+
   useEffect(() => {
     if (!pathExists(spec, root, path)) {
       setPath((current) => {
@@ -408,7 +413,7 @@ export const SchemaCrumbEditor: React.FC<SchemaCrumbEditorProps> = ({
   };
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+    <div className={`flex min-h-0 flex-1 flex-col overflow-hidden ${depthBgClass}`}>
       <div className="flex shrink-0 items-center gap-1 overflow-x-auto border-b border-border/60 px-2 py-1.5">
         {crumbs.map((crumb, index) => (
           <React.Fragment key={`${crumb.label}-${index}`}>

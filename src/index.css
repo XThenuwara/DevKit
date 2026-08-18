@@ -316,8 +316,9 @@ html[data-theme="claude-twilight"].dark {
     --accent: #4a4741;
     --accent-foreground: #f5f2eb;
     --destructive: #e07070;
-    --border: #625d55;
-    --input: #625d55;
+    /* subtle separators (less harsh than previous) */
+    --border: #5b554e;
+    --input: #5f5a54;
     --ring: #d97757;
     --chart-1: #d97757;
     --chart-2: #5db8a6;
@@ -330,7 +331,7 @@ html[data-theme="claude-twilight"].dark {
     --sidebar-primary-foreground: #1a1917;
     --sidebar-accent: #403b35;
     --sidebar-accent-foreground: #f5f2eb;
-    --sidebar-border: #625d55;
+    --sidebar-border: #5b554e;
     --sidebar-ring: #d97757;
     color-scheme: dark;
 }
