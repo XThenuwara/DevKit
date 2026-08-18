@@ -123,7 +123,7 @@ export const NonAsciiTool: React.FC = () => {
       }
       outputChildren={
         <div className="flex-1 min-w-0 flex flex-col overflow-hidden h-full">
-          <div className="flex-1 min-h-0 flex flex-col lg:flex-row overflow-hidden border border-border rounded-xl">
+          <div className="flex-1 min-h-0 flex flex-col lg:flex-row overflow-hidden border border-border/50 rounded-xl">
             {/* Visual Preview */}
             <div className="flex-1 min-w-0 p-4 overflow-y-auto border-r border-border/40 bg-background/50 font-mono text-sm leading-relaxed whitespace-pre-wrap break-words">
               {!inputText ? (
@@ -148,7 +148,7 @@ export const NonAsciiTool: React.FC = () => {
             </div>
 
             {/* Inspector Sidebar */}
-            <div className="w-full lg:w-[280px] shrink-0 flex flex-col bg-muted/10">
+            <div className="w-full lg:w-[280px] shrink-0 flex flex-col bg-background/50">
               <div className="px-4 py-2 border-b border-border/40 bg-muted/20 shrink-0">
                 <h3 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Detected Characters</h3>
               </div>

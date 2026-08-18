@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { CopyButton } from "@/components/shared/copy-button";
+import { ToolPanel, ToolShell } from "@/components/shared/tool-layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Clock, Play, Pause, Calendar, ArrowRightLeft } from "lucide-react";
@@ -108,186 +109,112 @@ export const EpochTool: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col gap-6 w-full px-4 py-6 animate-in fade-in duration-300">
-      {/* Header */}
-      <div className="flex flex-col gap-1.5 border-b border-border/40 pb-4">
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">Epoch / Unix Timestamp Converter</h1>
-        <p className="text-sm text-muted-foreground">
-          Convert Unix timestamps (seconds & milliseconds) to human-readable datetime formats and vice versa.
-        </p>
-      </div>
-
-      {/* Live Counter Display */}
-      <div className="p-5 rounded-xl border border-border bg-card shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3.5 text-left">
-          <div className="p-2.5 bg-primary/10 rounded-full border border-primary/20 text-primary">
-            <Clock className="h-5 w-5" />
+    <ToolShell
+      title="Epoch / Unix Timestamp Converter"
+      description="Convert Unix timestamps (seconds and milliseconds) to human-readable datetimes and back."
+    >
+      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
+        <div className="flex shrink-0 flex-col gap-3 rounded-xl border border-border/50 bg-background/50 p-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3 text-left">
+            <div className="rounded-lg border border-border/50 bg-background p-2 text-primary">
+              <Clock className="h-4 w-4" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Current Unix time</span>
+              <span className="font-mono text-lg font-bold tracking-tight text-foreground">{liveEpoch}s</span>
+            </div>
           </div>
-          <div className="flex flex-col">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Current Unix Epoch Time</span>
-            <span className="font-mono text-xl font-bold text-foreground tracking-tight">{liveEpoch} seconds</span>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <CopyButton value={liveEpoch.toString()} label="Copy Epoch" />
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setIsPlaying(!isPlaying)}
-            className="h-9 gap-1.5"
-          >
-            {isPlaying ? (
-              <>
-                <Pause className="h-4 w-4" />
-                Pause Ticker
-              </>
-            ) : (
-              <>
-                <Play className="h-4 w-4" />
-                Resume Ticker
-              </>
-            )}
-          </Button>
-        </div>
-      </div>
-
-      {/* Two Column Layout: Epoch-to-Date & Date-to-Epoch */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-        {/* Epoch to Date */}
-        <div className="p-5 rounded-xl border border-border bg-card text-left flex flex-col gap-4 min-h-[350px]">
-          <div className="flex items-center justify-between border-b border-border/20 pb-2.5">
-            <span className="text-sm font-bold text-foreground flex items-center gap-1.5">
-              <Calendar className="h-4 w-4 text-primary" />
-              Epoch to Date
-            </span>
-            <Button variant="ghost" size="sm" onClick={loadCurrentEpoch} className="h-8 text-xs text-primary hover:bg-primary/5">
-              Load Current
+          <div className="flex items-center gap-2">
+            <CopyButton value={liveEpoch.toString()} label="Copy" />
+            <Button variant="outline" size="sm" onClick={() => setIsPlaying(!isPlaying)} className="h-7 gap-1.5 text-xs">
+              {isPlaying ? <><Pause className="h-3.5 w-3.5" /> Pause</> : <><Play className="h-3.5 w-3.5" /> Resume</>}
             </Button>
           </div>
+        </div>
 
-          <div className="flex gap-2">
-            <div className="flex-1">
+        <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 overflow-auto md:grid-cols-2">
+          <ToolPanel className="gap-3 p-3">
+            <div className="flex items-center justify-between">
+              <span className="flex items-center gap-1.5 text-xs font-bold text-foreground/85">
+                <Calendar className="h-3.5 w-3.5 text-primary" />
+                Epoch to Date
+              </span>
+              <Button variant="ghost" size="sm" onClick={loadCurrentEpoch} className="h-7 text-xs">
+                Load current
+              </Button>
+            </div>
+            <div className="flex gap-2">
               <Input
                 value={inputEpoch}
                 onChange={(e) => setInputEpoch(e.target.value)}
                 placeholder="Enter Unix timestamp..."
-                className="font-mono text-xs h-9"
+                className="h-8 flex-1 font-mono text-xs"
               />
-            </div>
-            <div className="flex bg-muted/40 border border-border/40 p-0.5 rounded-lg">
-              <Button
-                variant={epochUnit === "s" ? "secondary" : "ghost"}
-                size="sm"
-                onClick={() => setEpochUnit("s")}
-                className="h-8 text-xs px-2.5"
-              >
-                sec
-              </Button>
-              <Button
-                variant={epochUnit === "ms" ? "secondary" : "ghost"}
-                size="sm"
-                onClick={() => setEpochUnit("ms")}
-                className="h-8 text-xs px-2.5"
-              >
-                ms
-              </Button>
-            </div>
-          </div>
-
-          {epochError && (
-            <span className="text-xs text-destructive bg-destructive/10 border border-destructive/20 p-2 rounded-lg font-mono">
-              {epochError}
-            </span>
-          )}
-
-          <div className="flex flex-col gap-4 mt-2">
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground">
-                <span>Local Timezone</span>
-                <CopyButton value={localDate} />
+              <div className="flex rounded-lg border border-border/50 bg-background/50 p-0.5">
+                <Button variant={epochUnit === "s" ? "secondary" : "ghost"} size="sm" onClick={() => setEpochUnit("s")} className="h-7 px-2.5 text-xs">sec</Button>
+                <Button variant={epochUnit === "ms" ? "secondary" : "ghost"} size="sm" onClick={() => setEpochUnit("ms")} className="h-7 px-2.5 text-xs">ms</Button>
               </div>
-              <input
-                readOnly
-                value={localDate}
-                placeholder="Date string..."
-                className="w-full font-mono text-xs p-2.5 rounded-lg border border-border/30 bg-muted/20 focus:outline-none"
-              />
             </div>
-
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground">
-                <span>UTC Timezone</span>
-                <CopyButton value={utcDate} />
+            {epochError && (
+              <span className="rounded-lg border border-destructive/20 bg-destructive/10 p-2 font-mono text-xs text-destructive">{epochError}</span>
+            )}
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground">
+                  <span>Local</span>
+                  <CopyButton value={localDate} />
+                </div>
+                <input readOnly value={localDate} placeholder="Date string..." className="w-full rounded-lg border border-border/50 bg-background/50 p-2 font-mono text-xs focus:outline-none" />
               </div>
-              <input
-                readOnly
-                value={utcDate}
-                placeholder="Date string..."
-                className="w-full font-mono text-xs p-2.5 rounded-lg border border-border/30 bg-muted/20 focus:outline-none"
-              />
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground">
+                  <span>UTC</span>
+                  <CopyButton value={utcDate} />
+                </div>
+                <input readOnly value={utcDate} placeholder="Date string..." className="w-full rounded-lg border border-border/50 bg-background/50 p-2 font-mono text-xs focus:outline-none" />
+              </div>
             </div>
-          </div>
-        </div>
+          </ToolPanel>
 
-        {/* Date to Epoch */}
-        <div className="p-5 rounded-xl border border-border bg-card text-left flex flex-col gap-4 min-h-[350px]">
-          <div className="flex items-center justify-between border-b border-border/20 pb-2.5">
-            <span className="text-sm font-bold text-foreground flex items-center gap-1.5">
-              <ArrowRightLeft className="h-4 w-4 text-sky-500" />
-              Date to Epoch
-            </span>
-            <Button variant="ghost" size="sm" onClick={loadCurrentDate} className="h-8 text-xs text-sky-500 hover:bg-sky-505">
-              Load Current
-            </Button>
-          </div>
-
-          <div className="flex flex-col gap-1">
+          <ToolPanel className="gap-3 p-3">
+            <div className="flex items-center justify-between">
+              <span className="flex items-center gap-1.5 text-xs font-bold text-foreground/85">
+                <ArrowRightLeft className="h-3.5 w-3.5" />
+                Date to Epoch
+              </span>
+              <Button variant="ghost" size="sm" onClick={loadCurrentDate} className="h-7 text-xs">
+                Load current
+              </Button>
+            </div>
             <Input
               type="datetime-local"
               step="1"
               value={inputDate}
               onChange={(e) => setInputDate(e.target.value)}
-              className="font-mono text-xs h-9 bg-background/50"
+              className="h-8 bg-background/50 font-mono text-xs"
             />
-            <span className="text-[10px] text-muted-foreground pl-1.5 mt-0.5">Supports ISO date/time parser: e.g. YYYY-MM-DDTHH:mm:ss</span>
-          </div>
-
-          {dateError && (
-            <span className="text-xs text-destructive bg-destructive/10 border border-destructive/20 p-2 rounded-lg font-mono">
-              {dateError}
-            </span>
-          )}
-
-          <div className="flex flex-col gap-4 mt-2">
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground">
-                <span>Seconds Timestamp (10 digits)</span>
-                <CopyButton value={outSeconds} />
+            {dateError && (
+              <span className="rounded-lg border border-destructive/20 bg-destructive/10 p-2 font-mono text-xs text-destructive">{dateError}</span>
+            )}
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground">
+                  <span>Seconds</span>
+                  <CopyButton value={outSeconds} />
+                </div>
+                <input readOnly value={outSeconds} placeholder="Seconds..." className="w-full rounded-lg border border-border/50 bg-background/50 p-2 font-mono text-xs focus:outline-none" />
               </div>
-              <input
-                readOnly
-                value={outSeconds}
-                placeholder="Seconds..."
-                className="w-full font-mono text-xs p-2.5 rounded-lg border border-border/30 bg-muted/20 focus:outline-none"
-              />
-            </div>
-
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground">
-                <span>Milliseconds Timestamp (13 digits)</span>
-                <CopyButton value={outMilliseconds} />
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground">
+                  <span>Milliseconds</span>
+                  <CopyButton value={outMilliseconds} />
+                </div>
+                <input readOnly value={outMilliseconds} placeholder="Milliseconds..." className="w-full rounded-lg border border-border/50 bg-background/50 p-2 font-mono text-xs focus:outline-none" />
               </div>
-              <input
-                readOnly
-                value={outMilliseconds}
-                placeholder="Milliseconds..."
-                className="w-full font-mono text-xs p-2.5 rounded-lg border border-border/30 bg-muted/20 focus:outline-none"
-              />
             </div>
-          </div>
+          </ToolPanel>
         </div>
       </div>
-    </div>
+    </ToolShell>
   );
 };

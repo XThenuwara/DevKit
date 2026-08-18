@@ -158,7 +158,7 @@ export const HashTool: React.FC = () => {
           {/* Text Hash Content */}
           <TabsContent value="text" className="border-none p-0 h-full flex flex-col gap-4">
             {/* Configuration controls */}
-            <div className="p-3 rounded-lg border border-border bg-card shadow-xs text-xs flex flex-col md:flex-row md:items-center gap-4 shrink-0">
+            <div className="p-3 rounded-lg border border-border/50 bg-background/50 text-xs flex flex-col md:flex-row md:items-center gap-4 shrink-0">
               <div className="flex items-center gap-2">
                 <Switch id="hmac-toggle" checked={useHmac} onCheckedChange={setUseHmac} />
                 <label htmlFor="hmac-toggle" className="text-xs font-semibold text-foreground cursor-pointer select-none">
@@ -217,7 +217,7 @@ export const HashTool: React.FC = () => {
               <div className="flex flex-col gap-1.5 h-full overflow-hidden text-left">
                 <span className="text-xs font-bold text-foreground/85">Hashed Output</span>
                 
-                <div className="flex-1 min-h-0 flex flex-col gap-3 rounded-xl border border-border bg-card p-3 overflow-y-auto">
+                <div className="flex-1 min-h-0 flex flex-col gap-3 rounded-xl border border-border/50 bg-background/50 p-3 overflow-y-auto">
                   {/* MD5 */}
                   <div className="flex flex-col gap-1">
                     <div className="flex items-center justify-between text-[10px] font-semibold">
@@ -228,7 +228,7 @@ export const HashTool: React.FC = () => {
                       readOnly
                       value={md5Hash}
                       placeholder="Hash value will appear here..."
-                      className="w-full font-mono text-xs p-2 rounded-lg border border-border/30 bg-muted/20 focus:outline-none select-all h-8"
+                      className="w-full font-mono text-xs p-2 rounded-lg border border-border/50 bg-background focus:outline-none select-all h-8"
                     />
                   </div>
 
@@ -242,7 +242,7 @@ export const HashTool: React.FC = () => {
                       readOnly
                       value={sha1Hash}
                       placeholder="Hash value will appear here..."
-                      className="w-full font-mono text-xs p-2 rounded-lg border border-border/30 bg-muted/20 focus:outline-none select-all h-8"
+                      className="w-full font-mono text-xs p-2 rounded-lg border border-border/50 bg-background focus:outline-none select-all h-8"
                     />
                   </div>
 
@@ -256,7 +256,7 @@ export const HashTool: React.FC = () => {
                       readOnly
                       value={sha256Hash}
                       placeholder="Hash value will appear here..."
-                      className="w-full font-mono text-xs p-2 rounded-lg border border-border/30 bg-muted/20 focus:outline-none select-all h-8"
+                      className="w-full font-mono text-xs p-2 rounded-lg border border-border/50 bg-background focus:outline-none select-all h-8"
                     />
                   </div>
 
@@ -270,7 +270,7 @@ export const HashTool: React.FC = () => {
                       readOnly
                       value={sha512Hash}
                       placeholder="Hash value will appear here..."
-                      className="w-full font-mono text-xs p-2 rounded-lg border border-border/30 bg-muted/20 focus:outline-none select-all h-8"
+                      className="w-full font-mono text-xs p-2 rounded-lg border border-border/50 bg-background focus:outline-none select-all h-8"
                     />
                   </div>
                 </div>
@@ -311,7 +311,7 @@ export const HashTool: React.FC = () => {
                 </div>
 
                 {fileName && (
-                  <div className="mt-2 p-2 rounded-lg border border-border/40 bg-card flex items-center justify-between gap-3 text-xs">
+                  <div className="mt-2 p-2 rounded-lg border border-border/50 bg-background/50 flex items-center justify-between gap-3 text-xs">
                     <div className="flex items-center gap-2 min-w-0">
                       <File className="h-4 w-4 text-sky-500 shrink-0" />
                       <div className="flex flex-col min-w-0">
@@ -329,7 +329,7 @@ export const HashTool: React.FC = () => {
               {/* Right Output hashes for File */}
               <div className="flex flex-col gap-1.5 h-full overflow-hidden text-left">
                 <span className="text-xs font-bold text-foreground/85">Checksum Hashes</span>
-                <div className="flex-1 min-h-0 flex flex-col gap-3 rounded-xl border border-border bg-card p-3 overflow-y-auto">
+                <div className="flex-1 min-h-0 flex flex-col gap-3 rounded-xl border border-border/50 bg-background/50 p-3 overflow-y-auto">
                   {isHashing ? (
                     <div className="flex-1 flex flex-col items-center justify-center p-6 text-muted-foreground/80 h-full">
                       <RefreshCw className="h-8 w-8 mb-2 animate-spin text-primary" />
@@ -346,7 +346,7 @@ export const HashTool: React.FC = () => {
                         <input
                           readOnly
                           value={fileHashes.md5}
-                          className="w-full font-mono text-xs p-2 rounded-lg border border-border/30 bg-muted/20 focus:outline-none select-all h-8"
+                          className="w-full font-mono text-xs p-2 rounded-lg border border-border/50 bg-background focus:outline-none select-all h-8"
                         />
                       </div>
 
@@ -359,7 +359,7 @@ export const HashTool: React.FC = () => {
                         <input
                           readOnly
                           value={fileHashes.sha1}
-                          className="w-full font-mono text-xs p-2 rounded-lg border border-border/30 bg-muted/20 focus:outline-none select-all h-8"
+                          className="w-full font-mono text-xs p-2 rounded-lg border border-border/50 bg-background focus:outline-none select-all h-8"
                         />
                       </div>
 
@@ -372,7 +372,7 @@ export const HashTool: React.FC = () => {
                         <input
                           readOnly
                           value={fileHashes.sha256}
-                          className="w-full font-mono text-xs p-2 rounded-lg border border-border/30 bg-muted/20 focus:outline-none select-all h-8"
+                          className="w-full font-mono text-xs p-2 rounded-lg border border-border/50 bg-background focus:outline-none select-all h-8"
                         />
                       </div>
 
@@ -385,7 +385,7 @@ export const HashTool: React.FC = () => {
                         <input
                           readOnly
                           value={fileHashes.sha512}
-                          className="w-full font-mono text-xs p-2 rounded-lg border border-border/30 bg-muted/20 focus:outline-none select-all h-8"
+                          className="w-full font-mono text-xs p-2 rounded-lg border border-border/50 bg-background focus:outline-none select-all h-8"
                         />
                       </div>
                     </div>

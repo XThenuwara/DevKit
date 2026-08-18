@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import CryptoJS from "crypto-js";
 import { CopyButton } from "@/components/shared/copy-button";
+import { ToolPanel, ToolShell } from "@/components/shared/tool-layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AlertCircle, CheckCircle2, Clock, ShieldAlert, Key, Eye, EyeOff, Sparkles } from "lucide-react";
@@ -292,32 +293,28 @@ export const JwtTool: React.FC = () => {
   const hasClaims = Boolean(headerText || payloadText);
 
   return (
-    <div className="flex flex-col gap-6 w-full px-4 py-6 animate-in fade-in duration-300">
-      <div className="flex flex-col gap-1.5 border-b border-border pb-4">
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">JWT Encoder / Decoder</h1>
-        <p className="text-sm text-muted-foreground">
-          Paste a token to inspect it, edit the header or payload JSON, and encode it back. HMAC (HS256 / HS384 / HS512) signing happens entirely in the browser.
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        <div className="lg:col-span-5 flex flex-col gap-4">
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold text-foreground/80">Encoded Token</span>
+    <ToolShell
+      title="JWT Encoder / Decoder"
+      description="Paste a token to inspect it, edit the header or payload JSON, and encode it back. HMAC (HS256 / HS384 / HS512) signing happens entirely in the browser."
+    >
+      <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 overflow-hidden lg:grid-cols-12">
+        <div className="flex min-h-0 flex-col gap-3 overflow-hidden lg:col-span-5">
+          <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-hidden">
+            <div className="flex shrink-0 items-center justify-between">
+              <span className="text-xs font-bold text-foreground/85">Encoded Token</span>
               <div className="flex items-center gap-1.5">
-                <Button variant="ghost" size="sm" onClick={loadSample} className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground">
+                <Button variant="ghost" size="sm" onClick={loadSample} className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground">
                   <Sparkles className="h-3.5 w-3.5 mr-1" />
                   Sample
                 </Button>
-                <Button variant="ghost" size="sm" onClick={handlePaste} className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground">
+                <Button variant="ghost" size="sm" onClick={handlePaste} className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground">
                   Paste
                 </Button>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={handleClear}
-                  className="h-8 px-2 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/5"
+                  className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/5"
                   disabled={!token && !secret}
                 >
                   Clear
@@ -329,11 +326,11 @@ export const JwtTool: React.FC = () => {
               value={token}
               onChange={(e) => handleTokenChange(e.target.value)}
               placeholder="Paste encoded JWT here (e.g. eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...)"
-              className="w-full min-h-[280px] p-4 rounded-xl border border-border bg-background hover:bg-background/80 focus:bg-background focus:border-ring/50 focus:ring-1 focus:ring-ring/30 focus:outline-none transition-all resize-y font-mono text-xs leading-relaxed break-all shadow-sm"
+              className="min-h-0 w-full flex-1 resize-none overflow-y-auto break-all rounded-xl border border-border/50 bg-background p-3 font-mono text-xs leading-relaxed focus:border-ring/50 focus:outline-none focus:ring-1 focus:ring-ring/30"
             />
 
             {token.trim() && !tokenError && (
-              <div className="flex items-center justify-between gap-2">
+              <div className="flex shrink-0 items-center justify-between gap-2">
                 <div className="flex items-center gap-3 text-[10px] font-bold uppercase tracking-wider">
                   <span className="flex items-center gap-1.5 text-rose-600 dark:text-rose-400">
                     <span className="h-2 w-2 rounded-full bg-rose-500" /> Header
@@ -351,7 +348,7 @@ export const JwtTool: React.FC = () => {
           </div>
 
           {token && (
-            <div className="flex flex-col gap-2">
+            <div className="flex shrink-0 flex-col gap-2">
               {tokenError ? (
                 <StatusBanner
                   tone="rose"
@@ -419,13 +416,13 @@ export const JwtTool: React.FC = () => {
           )}
         </div>
 
-        <div className="lg:col-span-7 flex flex-col gap-5">
+        <div className="flex min-h-0 flex-col gap-3 overflow-auto lg:col-span-7">
           {tokenError && !hasClaims ? (
-            <div className="flex-1 flex flex-col items-center justify-center border border-destructive/30 bg-destructive/5 rounded-xl p-8 text-center text-destructive font-mono text-xs gap-1.5 min-h-[300px] shadow-sm">
-              <ShieldAlert className="h-8 w-8 text-destructive animate-bounce mb-1" />
+            <ToolPanel className="min-h-[220px] items-center justify-center p-8 text-center text-xs font-mono text-destructive">
+              <ShieldAlert className="mb-1 h-8 w-8 text-destructive" />
               <span className="font-bold">Format Error</span>
               <span>{tokenError}</span>
-            </div>
+            </ToolPanel>
           ) : hasClaims ? (
             <>
               <EditableJsonBlock
@@ -445,7 +442,7 @@ export const JwtTool: React.FC = () => {
               />
 
               {payload && (payload.exp || payload.iat || payload.nbf) && (
-                <div className="p-3.5 border border-border rounded-xl bg-card text-xs text-left flex flex-col gap-2.5 shadow-sm text-foreground/85">
+                <div className="rounded-xl border border-border/50 bg-background/50 p-3.5 text-left text-xs text-foreground/85 flex flex-col gap-2.5">
                   <span className="font-bold text-foreground border-b border-border pb-1.5 flex items-center gap-1.5">
                     <Clock className="h-3.5 w-3.5 text-primary" /> Timestamps Summary
                   </span>
@@ -481,7 +478,7 @@ export const JwtTool: React.FC = () => {
                   <CopyButton value={signatureText} label="Copy Signature" />
                 </div>
 
-                <div className="p-4 rounded-xl border border-border border-l-4 border-emerald-500 bg-card flex flex-col gap-3 shadow-sm">
+                <div className="flex flex-col gap-3 rounded-xl border border-border/50 border-l-4 border-emerald-500 bg-background/50 p-4">
                   <div className="font-mono text-xs leading-relaxed text-emerald-700 dark:text-emerald-300 break-all">
                     {signatureText || "(empty)"}
                   </div>
@@ -517,17 +514,17 @@ export const JwtTool: React.FC = () => {
               </div>
             </>
           ) : (
-            <div className="flex-1 flex flex-col items-center justify-center border border-border bg-card rounded-xl text-center text-muted-foreground font-mono text-xs p-10 min-h-[350px] shadow-sm gap-3">
+            <ToolPanel className="min-h-[220px] items-center justify-center gap-3 p-10 text-center text-xs font-mono text-muted-foreground">
               <p>Paste a JWT on the left, or start from a sample and edit the claims.</p>
               <Button variant="outline" size="sm" onClick={loadSample} className="h-8 text-xs">
                 <Sparkles className="h-3.5 w-3.5 mr-1" />
                 Load sample token
               </Button>
-            </div>
+            </ToolPanel>
           )}
         </div>
       </div>
-    </div>
+    </ToolShell>
   );
 };
 
@@ -544,7 +541,7 @@ const StatusBanner: React.FC<{
     slate: "bg-muted/40 border-border text-foreground",
   };
   return (
-    <div className={`p-4 rounded-xl border flex gap-3.5 items-start animate-in slide-in-from-bottom-2 duration-300 ${tones[tone]}`}>
+    <div className={`p-3 rounded-xl border flex gap-3 items-start ${tones[tone]}`}>
       <div className="mt-0.5 shrink-0">{icon}</div>
       <div className="flex flex-col gap-0.5 text-left">
         <span className="font-bold text-sm">{title}</span>
@@ -589,7 +586,7 @@ const EditableJsonBlock: React.FC<{
         value={value}
         onChange={(e) => onChange(e.target.value)}
         spellCheck={false}
-        className={`w-full min-h-[140px] p-4 rounded-xl border border-border border-l-4 ${colors.border} bg-card ${colors.text} font-mono text-xs leading-relaxed overflow-x-auto shadow-sm focus:outline-none focus:ring-1 focus:ring-ring/30 resize-y`}
+        className={`w-full min-h-[120px] p-3 rounded-xl border border-border/50 border-l-4 ${colors.border} bg-background/50 ${colors.text} font-mono text-xs leading-relaxed overflow-x-auto focus:outline-none focus:ring-1 focus:ring-ring/30 resize-y`}
       />
       {error && (
         <span className="text-xs text-destructive bg-destructive/10 border border-destructive/20 p-2 rounded-lg font-mono">

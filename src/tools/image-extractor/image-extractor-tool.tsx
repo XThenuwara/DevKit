@@ -111,12 +111,12 @@ export const ImageExtractorTool: React.FC = () => {
   return (
     <div className="flex flex-col w-full h-full overflow-hidden animate-in fade-in duration-300">
       {/* ── Top Bar ─────────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between px-5 py-3 border-b border-border/50 shrink-0 bg-card/30">
+      <div className="flex items-center justify-between shrink-0">
         <div className="flex items-center gap-2.5">
           <ImageIcon className="h-4 w-4 text-primary shrink-0" />
           <div>
-            <h1 className="text-sm font-bold text-foreground leading-tight">Clipboard Image Extractor</h1>
-            <p className="text-[10px] text-muted-foreground leading-tight">Paste, view, and download images instantly</p>
+            <h1 className="text-base font-extrabold tracking-tight text-foreground leading-tight">Clipboard Image Extractor</h1>
+            <p className="text-[11px] text-muted-foreground/80 leading-tight">Paste, view, and download images instantly</p>
           </div>
         </div>
         
@@ -131,7 +131,7 @@ export const ImageExtractorTool: React.FC = () => {
 
       {/* ── Main Workspace ───────────────────────────────────────────────── */}
       <div 
-        className="flex-1 min-h-0 relative bg-muted/10 p-6 flex flex-col items-center justify-center overflow-hidden"
+        className="flex-1 min-h-0 relative bg-background p-4 flex flex-col items-center justify-center overflow-hidden"
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
@@ -159,10 +159,10 @@ export const ImageExtractorTool: React.FC = () => {
             </p>
           </div>
         ) : (
-          <div className="w-full max-w-5xl h-full flex flex-col bg-card border border-border/50 rounded-xl overflow-hidden shadow-sm">
+          <div className="w-full max-w-5xl h-full flex flex-col bg-background border border-border/50 rounded-xl overflow-hidden">
             
             {/* Image Viewer Area */}
-            <div className="flex-1 min-h-0 relative p-4 bg-muted/20 flex items-center justify-center overflow-auto pattern-checkerboard">
+            <div className="flex-1 min-h-0 relative p-4 bg-background/50 flex items-center justify-center overflow-auto pattern-checkerboard">
               <style dangerouslySetInnerHTML={{ __html: `
                 .pattern-checkerboard {
                   background-image: linear-gradient(45deg, rgba(0,0,0,0.03) 25%, transparent 25%, transparent 75%, rgba(0,0,0,0.03) 75%, rgba(0,0,0,0.03)), linear-gradient(45deg, rgba(0,0,0,0.03) 25%, transparent 25%, transparent 75%, rgba(0,0,0,0.03) 75%, rgba(0,0,0,0.03));

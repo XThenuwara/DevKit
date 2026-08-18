@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { CopyButton } from "@/components/shared/copy-button";
+import { ToolPanel, ToolShell } from "@/components/shared/tool-layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -72,116 +73,86 @@ export const UuidTool: React.FC = () => {
   const jsonArrayList = JSON.stringify(uuids, null, 2);
 
   return (
-    <div className="flex flex-col gap-6 w-full px-4 py-6 animate-in fade-in duration-300">
-      {/* Header */}
-      <div className="flex flex-col gap-1.5 border-b border-border/40 pb-4">
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">UUID / GUID Generator</h1>
-        <p className="text-sm text-muted-foreground">
-          Bulk generate cryptographically secure UUID (Universally Unique Identifier) v1 and v4 strings in different formats.
-        </p>
-      </div>
-
-      {/* Configuration Controls */}
-      <div className="p-5 rounded-xl border border-border bg-card shadow-sm flex flex-col gap-5">
-        <span className="text-sm font-semibold text-foreground/80 text-left border-b border-border/20 pb-2">Generator Settings</span>
-        
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-5 items-end text-left">
-          {/* Version */}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold text-muted-foreground">UUID Version</label>
+    <ToolShell
+      title="UUID / GUID Generator"
+      description="Bulk generate UUID v1 and v4 strings with hyphens, braces, and casing options."
+      actions={
+        <Button onClick={handleGenerate} className="h-7 gap-1.5 text-xs" size="sm">
+          <RefreshCw className="h-3.5 w-3.5" />
+          Regenerate
+        </Button>
+      }
+    >
+      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
+        <div className="flex shrink-0 flex-wrap items-end gap-3 rounded-xl border border-border/50 bg-background/50 p-3">
+          <div className="flex min-w-[140px] flex-col gap-1">
+            <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Version</label>
             <Select value={uuidVersion} onValueChange={(v) => setUuidVersion(v as any)}>
-              <SelectTrigger className="h-9">
+              <SelectTrigger className="h-8 text-xs">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="v4">Version 4 (Random)</SelectItem>
-                <SelectItem value="v1">Version 1 (Time-based)</SelectItem>
+                <SelectItem value="v4">v4 Random</SelectItem>
+                <SelectItem value="v1">v1 Time-based</SelectItem>
               </SelectContent>
             </Select>
           </div>
-
-          {/* Bulk count */}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold text-muted-foreground">Quantity (Max 500)</label>
+          <div className="flex w-[110px] flex-col gap-1">
+            <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Quantity</label>
             <Input
               type="number"
               value={count}
               onChange={(e) => setCount(parseInt(e.target.value, 10) || 1)}
               min={1}
               max={500}
-              className="h-9"
+              className="h-8 text-xs"
             />
           </div>
-
-          {/* Hyphens */}
-          <div className="flex flex-col gap-2.5 pb-2">
-            <label className="text-xs font-semibold text-muted-foreground">Use Hyphens</label>
-            <div className="flex items-center gap-2">
-              <Switch id="hyphen-toggle" checked={useHyphens} onCheckedChange={setUseHyphens} />
-              <span className="text-xs font-medium text-foreground">e.g. f81d4fae-...</span>
-            </div>
+          <div className="flex items-center gap-2 pb-1">
+            <Switch id="hyphen-toggle" checked={useHyphens} onCheckedChange={setUseHyphens} />
+            <label htmlFor="hyphen-toggle" className="text-xs font-medium">Hyphens</label>
           </div>
-
-          {/* Braces */}
-          <div className="flex flex-col gap-2.5 pb-2">
-            <label className="text-xs font-semibold text-muted-foreground">Wrap in Braces</label>
-            <div className="flex items-center gap-2">
-              <Switch id="braces-toggle" checked={useBraces} onCheckedChange={setUseBraces} />
-              <span className="text-xs font-medium text-foreground">e.g. {"{f81d4fae-...}"}</span>
-            </div>
+          <div className="flex items-center gap-2 pb-1">
+            <Switch id="braces-toggle" checked={useBraces} onCheckedChange={setUseBraces} />
+            <label htmlFor="braces-toggle" className="text-xs font-medium">Braces</label>
           </div>
-
-          {/* Uppercase */}
-          <div className="flex flex-col gap-2.5 pb-2">
-            <label className="text-xs font-semibold text-muted-foreground">Uppercase Casing</label>
-            <div className="flex items-center gap-2">
-              <Switch id="case-toggle" checked={uppercase} onCheckedChange={setUppercase} />
-              <span className="text-xs font-medium text-foreground">e.g. F81D4FAE-...</span>
-            </div>
+          <div className="flex items-center gap-2 pb-1">
+            <Switch id="case-toggle" checked={uppercase} onCheckedChange={setUppercase} />
+            <label htmlFor="case-toggle" className="text-xs font-medium">Uppercase</label>
           </div>
         </div>
 
-        {/* Generate button */}
-        <Button onClick={handleGenerate} className="self-start gap-1.5 h-9" size="sm">
-          <RefreshCw className="h-4 w-4" />
-          Regenerate List
-        </Button>
-      </div>
-
-      {/* Main output */}
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-stretch">
-        {/* Plain Text List */}
-        <div className="md:col-span-7 flex flex-col gap-2 text-left min-h-[350px]">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-semibold text-foreground/80 flex items-center gap-1.5">
-              <List className="h-4 w-4 text-primary" />
-              Plain Text List
-            </span>
-            <CopyButton value={plainTextList} label="Copy List" />
-          </div>
-          <textarea
-            readOnly
-            value={plainTextList}
-            className="flex-1 w-full min-h-[300px] p-4 rounded-xl border border-border/40 bg-muted/20 font-mono text-sm leading-relaxed focus:outline-none resize-y"
-          />
-        </div>
-
-        {/* JSON Representation */}
-        <div className="md:col-span-5 flex flex-col gap-2 text-left min-h-[350px]">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-semibold text-foreground/80 flex items-center gap-1.5">
-              <FileCode className="h-4 w-4 text-sky-500" />
-              JSON Array Format
-            </span>
-            <CopyButton value={jsonArrayList} label="Copy JSON" />
-          </div>
-          <textarea
-            readOnly
-            value={jsonArrayList}
-            className="flex-1 w-full min-h-[300px] p-4 rounded-xl border border-border/40 bg-muted/20 font-mono text-xs leading-relaxed focus:outline-none resize-y"
-          />
+        <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 overflow-hidden md:grid-cols-12">
+          <ToolPanel className="md:col-span-7 p-3">
+            <div className="mb-1.5 flex items-center justify-between">
+              <span className="flex items-center gap-1.5 text-xs font-bold text-foreground/85">
+                <List className="h-3.5 w-3.5 text-primary" />
+                Plain Text
+              </span>
+              <CopyButton value={plainTextList} label="Copy" />
+            </div>
+            <textarea
+              readOnly
+              value={plainTextList}
+              className="min-h-0 w-full flex-1 resize-none rounded-lg border border-border/50 bg-background/50 p-3 font-mono text-xs leading-relaxed focus:outline-none"
+            />
+          </ToolPanel>
+          <ToolPanel className="md:col-span-5 p-3">
+            <div className="mb-1.5 flex items-center justify-between">
+              <span className="flex items-center gap-1.5 text-xs font-bold text-foreground/85">
+                <FileCode className="h-3.5 w-3.5" />
+                JSON Array
+              </span>
+              <CopyButton value={jsonArrayList} label="Copy" />
+            </div>
+            <textarea
+              readOnly
+              value={jsonArrayList}
+              className="min-h-0 w-full flex-1 resize-none rounded-lg border border-border/50 bg-background/50 p-3 font-mono text-xs leading-relaxed focus:outline-none"
+            />
+          </ToolPanel>
         </div>
       </div>
-    </div>
+    </ToolShell>
   );
 };

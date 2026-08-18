@@ -452,17 +452,17 @@ export const TimezoneTool: React.FC = () => {
         inputType="none"
         outputType="none"
       >
-        <div className="flex-1 w-full min-h-0 flex flex-col gap-4 overflow-hidden text-left bg-muted/10 border border-border/40 rounded-2xl p-4 shadow-xs">
+        <div className="flex-1 w-full min-h-0 flex flex-col gap-4 overflow-hidden text-left bg-background border border-border/50 rounded-xl p-3">
             
             {/* Top Toolbar controls */}
             <div className="flex flex-wrap items-center justify-between gap-3 shrink-0 border-b border-border/30 pb-3">
               
               {/* Date Navigation */}
               <div className="flex items-center gap-1.5 flex-wrap">
-                <Button variant="outline" className="h-8 w-8 p-0 rounded-lg border-border/50 bg-card" onClick={() => shiftDate(-1)}>
+                <Button variant="outline" className="h-8 w-8 p-0 rounded-lg border-border/50 bg-background" onClick={() => shiftDate(-1)}>
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
-                <div className="flex items-center gap-1.5 px-3 h-8 rounded-lg border border-border/40 bg-card text-xs font-semibold select-none text-foreground shadow-xs">
+                <div className="flex items-center gap-1.5 px-3 h-8 rounded-lg border border-border/50 bg-background text-xs font-semibold select-none text-foreground">
                   <CalendarIcon className="h-3.5 w-3.5 text-muted-foreground" />
                   <span>
                     {new Date(selectedTimestamp).toLocaleDateString("en-US", {
@@ -474,11 +474,11 @@ export const TimezoneTool: React.FC = () => {
                     })}
                   </span>
                 </div>
-                <Button variant="outline" className="h-8 w-8 p-0 rounded-lg border-border/50 bg-card" onClick={() => shiftDate(1)}>
+                <Button variant="outline" className="h-8 w-8 p-0 rounded-lg border-border/50 bg-background" onClick={() => shiftDate(1)}>
                   <ChevronRight className="h-4 w-4" />
                 </Button>
                 
-                <Button variant="outline" className="h-8 text-xs ml-1 rounded-lg border-border/50 bg-card" onClick={resetToNow}>
+                <Button variant="outline" className="h-8 text-xs ml-1 rounded-lg border-border/50 bg-background" onClick={resetToNow}>
                   <Clock className="h-3.5 w-3.5 mr-1" />
                   Reset to Now
                 </Button>
@@ -488,7 +488,7 @@ export const TimezoneTool: React.FC = () => {
               <div className="flex items-center gap-2 flex-wrap md:flex-nowrap">
 
                 {/* Interval Selector */}
-                <div className="flex items-center gap-1.5 border border-border/40 bg-card rounded-lg px-2 h-8 shadow-xs text-xs font-semibold text-foreground">
+                <div className="flex items-center gap-1.5 border border-border/50 bg-background rounded-lg px-2 h-8 text-xs font-semibold text-foreground">
                   <span className="text-[10px] font-bold text-muted-foreground select-none">Interval:</span>
                   <select
                     value={gridInterval}
@@ -514,7 +514,7 @@ export const TimezoneTool: React.FC = () => {
                       }}
                       onFocus={() => setShowSearchDropdown(true)}
                       placeholder="Add timezone... e.g. Tokyo"
-                      className="h-8 pr-8 text-xs font-medium bg-card text-foreground border-border/50 rounded-lg"
+                      className="h-8 pr-8 text-xs font-medium bg-background text-foreground border-border/50 rounded-lg"
                     />
                     <Plus className="absolute right-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground/60" />
                   </div>
@@ -563,7 +563,7 @@ export const TimezoneTool: React.FC = () => {
                 {/* 12h/24h toggle */}
                 <Button
                   variant="outline"
-                  className="h-8 text-xs rounded-lg border-border/50 bg-card"
+                  className="h-8 text-xs rounded-lg border-border/50 bg-background"
                   onClick={() => setIs24Hour(!is24Hour)}
                 >
                   {is24Hour ? "12-Hour" : "24-Hour"}
@@ -573,10 +573,10 @@ export const TimezoneTool: React.FC = () => {
             </div>
 
             {/* Unified Grid Table Container */}
-            <div className="flex-1 min-h-0 flex flex-col border border-border/40 rounded-2xl bg-muted/30 p-1 overflow-y-auto overflow-x-hidden">
+            <div className="flex-1 min-h-0 flex flex-col border border-border/50 rounded-xl bg-background/50 p-1 overflow-y-auto overflow-x-hidden">
               
               {/* Outer Horizontal Scroll Wrapper for timelines */}
-              <div ref={timelineScrollRef} className="flex-1 min-w-0 overflow-x-auto overflow-y-hidden scrollbar-thin bg-card border border-border/50 rounded-xl shadow-xs flex flex-col">
+              <div ref={timelineScrollRef} className="flex-1 min-w-0 overflow-x-auto overflow-y-hidden scrollbar-thin bg-background border border-border/50 rounded-xl flex flex-col">
                 <div className="min-w-full h-full flex flex-col select-none relative animate-in fade-in duration-200">
                   
                   {/* Row 0: Top Header Hour Scale */}
@@ -674,7 +674,7 @@ export const TimezoneTool: React.FC = () => {
                       return (
                         <div key={tz} className="flex items-center h-14 border-b last:border-b-0 border-border/20 hover:bg-muted/5 transition-colors group/row">
                           {/* Left Sticky Timezone Metadata Card */}
-                          <div className="w-[210px] md:w-[250px] shrink-0 sticky left-0 z-30 bg-card border-r border-border/30 px-3 flex items-center justify-between gap-2 h-full shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
+                          <div className="w-[210px] md:w-[250px] shrink-0 sticky left-0 z-30 bg-background border-r border-border/30 px-3 flex items-center justify-between gap-2 h-full">
                             <div className="flex items-center min-w-0 h-full relative flex-1">
                               
                               {/* Left control/badge area */}
@@ -894,7 +894,7 @@ export const TimezoneTool: React.FC = () => {
             </div>
 
             {/* Bottom summary info & Copy Action */}
-            <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 p-3 rounded-xl border border-border/50 bg-card shadow-xs shrink-0">
+            <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 p-3 rounded-xl border border-border/50 bg-background/50 shrink-0">
               <div className="flex items-center gap-2 min-w-0">
                 <Info className="h-4 w-4 text-muted-foreground shrink-0 animate-pulse" />
                 <div className="flex flex-col min-w-0">

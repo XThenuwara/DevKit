@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { CopyButton } from "@/components/shared/copy-button";
+import { ToolPanel, ToolShell } from "@/components/shared/tool-layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ArrowRightLeft, CalendarRange } from "lucide-react";
@@ -102,21 +103,21 @@ const DateFacts: React.FC<{ date: ParsedDate | null }> = ({ date }) => {
   return (
     <div className="flex flex-col gap-3 mt-1">
       <div className="grid grid-cols-2 gap-2">
-        <div className="p-2.5 rounded-lg border border-border/40 bg-muted/20">
+        <div className="p-2.5 rounded-lg border border-border/50 bg-background/50">
           <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Weekday</div>
           <div className="text-xs font-bold font-mono mt-0.5">{weekday}</div>
         </div>
-        <div className="p-2.5 rounded-lg border border-border/40 bg-muted/20">
+        <div className="p-2.5 rounded-lg border border-border/50 bg-background/50">
           <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Year type</div>
           <div className="text-xs font-bold font-mono mt-0.5">{leap ? "Leap (366 days)" : "Common (365 days)"}</div>
         </div>
-        <div className="p-2.5 rounded-lg border border-border/40 bg-muted/20">
+        <div className="p-2.5 rounded-lg border border-border/50 bg-background/50">
           <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Long form</div>
           <div className="text-xs font-bold font-mono mt-0.5">
             {MONTHS[date.month - 1]} {date.day}, {date.year}
           </div>
         </div>
-        <div className="p-2.5 rounded-lg border border-border/40 bg-muted/20">
+        <div className="p-2.5 rounded-lg border border-border/50 bg-background/50">
           <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Days remaining</div>
           <div className="text-xs font-bold font-mono mt-0.5">{remaining} of {yearLen}</div>
         </div>
@@ -194,151 +195,107 @@ export const JulianTool: React.FC = () => {
   }, [gregorianInput]);
 
   return (
-    <div className="flex flex-col gap-6 w-full px-4 py-6 animate-in fade-in duration-300">
-      <div className="flex flex-col gap-1.5 border-b border-border/40 pb-4">
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">Julian Date Converter</h1>
-        <p className="text-sm text-muted-foreground">
-          Convert ordinal Julian dates (<span className="font-mono">yyyyDDD</span>) to Gregorian (<span className="font-mono">yyyy-mm-dd</span>) and back. Day 001 is January 1.
-        </p>
-      </div>
-
-      <div className="p-5 rounded-xl border border-border bg-card shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3.5 text-left">
-          <div className="p-2.5 bg-primary/10 rounded-full border border-primary/20 text-primary">
-            <CalendarRange className="h-5 w-5" />
-          </div>
-          <div className="flex flex-col">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Today&apos;s ordinal date</span>
-            <span className="font-mono text-xl font-bold text-foreground tracking-tight">
-              {formatJulianCompact(today)}
-              <span className="text-sm font-semibold text-muted-foreground ml-2">
-                {formatGregorian(today)} · {WEEKDAYS[weekdayFromYmd(today.year, today.month, today.day)]}
+    <ToolShell
+      title="Julian Date Converter"
+      description="Convert ordinal Julian dates (yyyyDDD) to Gregorian (yyyy-mm-dd) and back. Day 001 is January 1."
+    >
+      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
+        <div className="flex shrink-0 flex-col gap-3 rounded-xl border border-border/50 bg-background/50 p-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3 text-left">
+            <div className="rounded-lg border border-border/50 bg-background p-2 text-primary">
+              <CalendarRange className="h-4 w-4" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Today&apos;s ordinal date</span>
+              <span className="font-mono text-lg font-bold tracking-tight text-foreground">
+                {formatJulianCompact(today)}
+                <span className="ml-2 text-xs font-semibold text-muted-foreground">
+                  {formatGregorian(today)} · {WEEKDAYS[weekdayFromYmd(today.year, today.month, today.day)]}
+                </span>
               </span>
-            </span>
+            </div>
           </div>
+          <CopyButton value={formatJulianCompact(today)} label="Copy yyyyDDD" />
         </div>
-        <CopyButton value={formatJulianCompact(today)} label="Copy yyyyDDD" />
-      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-        <div className="p-5 rounded-xl border border-border bg-card text-left flex flex-col gap-4 min-h-[380px]">
-          <div className="flex items-center justify-between border-b border-border/20 pb-2.5">
-            <span className="text-sm font-bold text-foreground flex items-center gap-1.5">
-              <CalendarRange className="h-4 w-4 text-primary" />
-              Julian to Gregorian
-            </span>
-            <Button variant="ghost" size="sm" onClick={() => setJulianInput(formatJulianCompact(today))} className="h-8 text-xs text-primary hover:bg-primary/5">
-              Load Today
-            </Button>
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Ordinal date (yyyyDDD)</span>
+        <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 overflow-auto md:grid-cols-2">
+          <ToolPanel className="gap-3 p-3">
+            <div className="flex items-center justify-between">
+              <span className="flex items-center gap-1.5 text-xs font-bold text-foreground/85">
+                <CalendarRange className="h-3.5 w-3.5 text-primary" />
+                Julian to Gregorian
+              </span>
+              <Button variant="ghost" size="sm" onClick={() => setJulianInput(formatJulianCompact(today))} className="h-7 text-xs">
+                Load today
+              </Button>
+            </div>
             <Input
               value={julianInput}
               onChange={(e) => setJulianInput(e.target.value)}
               placeholder="2026228 or 2026-228"
-              className="font-mono text-xs h-9"
+              className="h-8 font-mono text-xs"
             />
-            <span className="text-[10px] text-muted-foreground pl-1.5 mt-0.5">Accepts 2026228, 2026-228, or 2026.228</span>
-          </div>
-
-          {julianError && (
-            <span className="text-xs text-destructive bg-destructive/10 border border-destructive/20 p-2 rounded-lg font-mono">
-              {julianError}
-            </span>
-          )}
-
-          <div className="flex flex-col gap-4 mt-1">
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground">
-                <span>Gregorian (yyyy-mm-dd)</span>
-                <CopyButton value={gregorianFromJulian} />
+            {julianError && (
+              <span className="rounded-lg border border-destructive/20 bg-destructive/10 p-2 font-mono text-xs text-destructive">{julianError}</span>
+            )}
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground">
+                  <span>Gregorian (yyyy-mm-dd)</span>
+                  <CopyButton value={gregorianFromJulian} />
+                </div>
+                <input readOnly value={gregorianFromJulian} placeholder="yyyy-mm-dd..." className="w-full rounded-lg border border-border/50 bg-background/50 p-2 font-mono text-xs focus:outline-none" />
               </div>
-              <input
-                readOnly
-                value={gregorianFromJulian}
-                placeholder="yyyy-mm-dd..."
-                className="w-full font-mono text-xs p-2.5 rounded-lg border border-border/30 bg-muted/20 focus:outline-none"
-              />
-            </div>
-
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground">
-                <span>Dashed ordinal (yyyy-DDD)</span>
-                <CopyButton value={julianDashed} />
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground">
+                  <span>Dashed ordinal (yyyy-DDD)</span>
+                  <CopyButton value={julianDashed} />
+                </div>
+                <input readOnly value={julianDashed} placeholder="yyyy-DDD..." className="w-full rounded-lg border border-border/50 bg-background/50 p-2 font-mono text-xs focus:outline-none" />
               </div>
-              <input
-                readOnly
-                value={julianDashed}
-                placeholder="yyyy-DDD..."
-                className="w-full font-mono text-xs p-2.5 rounded-lg border border-border/30 bg-muted/20 focus:outline-none"
-              />
             </div>
-          </div>
+            <DateFacts date={julianParsed} />
+          </ToolPanel>
 
-          <DateFacts date={julianParsed} />
-        </div>
-
-        <div className="p-5 rounded-xl border border-border bg-card text-left flex flex-col gap-4 min-h-[380px]">
-          <div className="flex items-center justify-between border-b border-border/20 pb-2.5">
-            <span className="text-sm font-bold text-foreground flex items-center gap-1.5">
-              <ArrowRightLeft className="h-4 w-4 text-sky-500" />
-              Gregorian to Julian
-            </span>
-            <Button variant="ghost" size="sm" onClick={() => setGregorianInput(formatGregorian(today))} className="h-8 text-xs text-sky-500 hover:bg-sky-500/5">
-              Load Today
-            </Button>
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Gregorian date (yyyy-mm-dd)</span>
+          <ToolPanel className="gap-3 p-3">
+            <div className="flex items-center justify-between">
+              <span className="flex items-center gap-1.5 text-xs font-bold text-foreground/85">
+                <ArrowRightLeft className="h-3.5 w-3.5" />
+                Gregorian to Julian
+              </span>
+              <Button variant="ghost" size="sm" onClick={() => setGregorianInput(formatGregorian(today))} className="h-7 text-xs">
+                Load today
+              </Button>
+            </div>
             <Input
               type="date"
               value={gregorianInput}
               onChange={(e) => setGregorianInput(e.target.value)}
-              className="font-mono text-xs h-9 bg-background/50"
+              className="h-8 bg-background/50 font-mono text-xs"
             />
-            <span className="text-[10px] text-muted-foreground pl-1.5 mt-0.5">Pick a date or type yyyy-mm-dd</span>
-          </div>
-
-          {gregorianError && (
-            <span className="text-xs text-destructive bg-destructive/10 border border-destructive/20 p-2 rounded-lg font-mono">
-              {gregorianError}
-            </span>
-          )}
-
-          <div className="flex flex-col gap-4 mt-1">
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground">
-                <span>Julian compact (yyyyDDD)</span>
-                <CopyButton value={julianFromGregorian} />
+            {gregorianError && (
+              <span className="rounded-lg border border-destructive/20 bg-destructive/10 p-2 font-mono text-xs text-destructive">{gregorianError}</span>
+            )}
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground">
+                  <span>Julian compact (yyyyDDD)</span>
+                  <CopyButton value={julianFromGregorian} />
+                </div>
+                <input readOnly value={julianFromGregorian} placeholder="yyyyDDD..." className="w-full rounded-lg border border-border/50 bg-background/50 p-2 font-mono text-xs focus:outline-none" />
               </div>
-              <input
-                readOnly
-                value={julianFromGregorian}
-                placeholder="yyyyDDD..."
-                className="w-full font-mono text-xs p-2.5 rounded-lg border border-border/30 bg-muted/20 focus:outline-none"
-              />
-            </div>
-
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground">
-                <span>Dashed ordinal (yyyy-DDD)</span>
-                <CopyButton value={julianDashedFromGregorian} />
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground">
+                  <span>Dashed ordinal (yyyy-DDD)</span>
+                  <CopyButton value={julianDashedFromGregorian} />
+                </div>
+                <input readOnly value={julianDashedFromGregorian} placeholder="yyyy-DDD..." className="w-full rounded-lg border border-border/50 bg-background/50 p-2 font-mono text-xs focus:outline-none" />
               </div>
-              <input
-                readOnly
-                value={julianDashedFromGregorian}
-                placeholder="yyyy-DDD..."
-                className="w-full font-mono text-xs p-2.5 rounded-lg border border-border/30 bg-muted/20 focus:outline-none"
-              />
             </div>
-          </div>
-
-          <DateFacts date={gregorianParsed} />
+            <DateFacts date={gregorianParsed} />
+          </ToolPanel>
         </div>
       </div>
-    </div>
+    </ToolShell>
   );
 };

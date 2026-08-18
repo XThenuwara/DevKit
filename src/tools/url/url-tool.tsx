@@ -154,7 +154,7 @@ export const UrlTool: React.FC = () => {
   };
 
   return (
-    <div className="w-full">
+    <div className="w-full h-full flex flex-col overflow-hidden">
       <ToolLayout
         title="URL Encoder / Decoder"
         description="Encode text to URL-safe strings, or decode URL components. Full URL paths will trigger the interactive URL search parameters builder."
@@ -209,41 +209,40 @@ export const UrlTool: React.FC = () => {
         }
       >
         {parsedUrl && (
-          <div className="p-6 rounded-xl border border-border bg-card mt-6 text-left shadow-sm flex flex-col gap-5">
-            <div className="flex items-center justify-between border-b border-border/20 pb-3">
-              <span className="text-sm font-bold text-foreground flex items-center gap-1.5">
-                <Link2 className="h-4 w-4 text-primary" />
-                URL Query Parameter Parser
+          <div className="mt-3 flex min-h-0 flex-col gap-3 overflow-auto rounded-xl border border-border/50 bg-background/50 p-3 text-left">
+            <div className="flex items-center justify-between">
+              <span className="flex items-center gap-1.5 text-xs font-bold text-foreground">
+                <Link2 className="h-3.5 w-3.5 text-primary" />
+                Query parameters
               </span>
-              <span className="text-xs text-muted-foreground bg-muted/30 border px-2 py-0.5 rounded-lg flex items-center gap-1">
-                <Info className="h-3 w-3 text-sky-500" />
-                Editing variables updates the raw text field above.
+              <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                <Info className="h-3 w-3" />
+                Edits update the input
               </span>
             </div>
 
-            {/* URL Breakdown Metadata */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs">
+            <div className="grid grid-cols-1 gap-2 text-xs md:grid-cols-4">
               <div className="flex flex-col gap-1">
-                <span className="text-muted-foreground font-medium">Protocol:</span>
-                <span className="font-mono text-foreground font-semibold py-1 bg-muted/10 px-2 rounded-lg border border-border/10">
+                <span className="text-muted-foreground">Protocol</span>
+                <span className="truncate rounded-lg border border-border/50 bg-background px-2 py-1 font-mono font-semibold">
                   {parsedUrl.protocol || "none"}
                 </span>
               </div>
               <div className="flex flex-col gap-1">
-                <span className="text-muted-foreground font-medium">Host / domain:</span>
-                <span className="font-mono text-foreground font-semibold py-1 bg-muted/10 px-2 rounded-lg border border-border/10 truncate">
+                <span className="text-muted-foreground">Host</span>
+                <span className="truncate rounded-lg border border-border/50 bg-background px-2 py-1 font-mono font-semibold">
                   {parsedUrl.host || "none"}
                 </span>
               </div>
               <div className="flex flex-col gap-1">
-                <span className="text-muted-foreground font-medium">Pathname:</span>
-                <span className="font-mono text-foreground font-semibold py-1 bg-muted/10 px-2 rounded-lg border border-border/10 truncate">
+                <span className="text-muted-foreground">Path</span>
+                <span className="truncate rounded-lg border border-border/50 bg-background px-2 py-1 font-mono font-semibold">
                   {parsedUrl.pathname || "none"}
                 </span>
               </div>
               <div className="flex flex-col gap-1">
-                <span className="text-muted-foreground font-medium">Hash:</span>
-                <span className="font-mono text-foreground font-semibold py-1 bg-muted/10 px-2 rounded-lg border border-border/10 truncate">
+                <span className="text-muted-foreground">Hash</span>
+                <span className="truncate rounded-lg border border-border/50 bg-background px-2 py-1 font-mono font-semibold">
                   {parsedUrl.hash || "none"}
                 </span>
               </div>

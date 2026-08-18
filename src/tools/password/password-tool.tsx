@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { CopyButton } from "@/components/shared/copy-button";
+import { ToolPanel, ToolShell } from "@/components/shared/tool-layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -126,25 +127,17 @@ export const PasswordTool: React.FC = () => {
   }, [passwords]);
 
   return (
-    <div className="flex flex-col gap-6 w-full px-4 py-6 animate-in fade-in duration-300">
-      {/* Header */}
-      <div className="flex flex-col gap-1.5 border-b border-border/40 pb-4">
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">Secure Password Generator</h1>
-        <p className="text-sm text-muted-foreground">
-          Create strong, random passwords client-side using custom rules and evaluate their entropy strength.
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
-        {/* Left Config Panel */}
-        <div className="md:col-span-5 p-5 rounded-xl border border-border bg-card shadow-sm flex flex-col gap-5 text-left">
-          <span className="text-sm font-semibold text-foreground/80 border-b border-border/20 pb-2">Settings</span>
-
-          {/* Length slider */}
+    <ToolShell
+      title="Secure Password Generator"
+      description="Create random passwords client-side with custom rules and entropy strength."
+    >
+      <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 overflow-hidden md:grid-cols-12">
+        <ToolPanel className="gap-4 p-3 md:col-span-5">
+          <span className="text-xs font-bold text-foreground/85">Settings</span>
           <div className="flex flex-col gap-2">
             <div className="flex justify-between text-xs font-semibold">
-              <span className="text-muted-foreground">Password Length</span>
-              <span className="text-primary font-mono">{length} chars</span>
+              <span className="text-muted-foreground">Length</span>
+              <span className="font-mono text-primary">{length}</span>
             </div>
             <input
               type="range"
@@ -152,59 +145,49 @@ export const PasswordTool: React.FC = () => {
               max={64}
               value={length}
               onChange={(e) => setLength(parseInt(e.target.value, 10))}
-              className="w-full h-1.5 bg-muted border-none rounded-lg appearance-none cursor-pointer accent-primary"
+              className="h-1.5 w-full cursor-pointer appearance-none rounded-lg bg-background/50 accent-primary"
             />
           </div>
-
-          {/* Switches */}
-          <div className="flex flex-col gap-3.5">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-foreground/80">Uppercase (A-Z)</span>
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between text-xs font-semibold">
+              <span>Uppercase (A-Z)</span>
               <Switch checked={includeUppercase} onCheckedChange={setIncludeUppercase} />
             </div>
-
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-foreground/80">Lowercase (a-z)</span>
+            <div className="flex items-center justify-between text-xs font-semibold">
+              <span>Lowercase (a-z)</span>
               <Switch checked={includeLowercase} onCheckedChange={setIncludeLowercase} />
             </div>
-
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-foreground/80">Numbers (0-9)</span>
+            <div className="flex items-center justify-between text-xs font-semibold">
+              <span>Numbers (0-9)</span>
               <Switch checked={includeNumbers} onCheckedChange={setIncludeNumbers} />
             </div>
-
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-foreground/80">Symbols (!@#$...)</span>
+            <div className="flex items-center justify-between text-xs font-semibold">
+              <span>Symbols (!@#$...)</span>
               <Switch checked={includeSymbols} onCheckedChange={setIncludeSymbols} />
             </div>
           </div>
-
-          {/* Quantity */}
-          <div className="flex flex-col gap-1.5 border-t border-border/20 pt-4">
-            <label className="text-xs font-semibold text-muted-foreground">Passwords Quantity (Max 50)</label>
+          <div className="flex flex-col gap-1.5 border-t border-border/50 pt-3">
+            <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Quantity</label>
             <Input
               type="number"
               min={1}
               max={50}
               value={quantity}
               onChange={(e) => setQuantity(parseInt(e.target.value, 10) || 1)}
-              className="h-9 font-mono text-xs bg-background/50"
+              className="h-8 bg-background/50 font-mono text-xs"
             />
           </div>
-
-          <Button onClick={generatePasswords} size="sm" className="w-full gap-1.5 h-9 mt-1">
-            <RefreshCw className="h-4 w-4" />
-            Regenerate Passwords
+          <Button onClick={generatePasswords} size="sm" className="h-8 w-full gap-1.5 text-xs">
+            <RefreshCw className="h-3.5 w-3.5" />
+            Regenerate
           </Button>
-        </div>
+        </ToolPanel>
 
-        {/* Right Output Panel */}
-        <div className="md:col-span-7 flex flex-col gap-5 text-left">
-          {/* Strength evaluator */}
+        <div className="flex min-h-0 flex-col gap-3 overflow-hidden md:col-span-7">
           {passwords.length > 0 && passwords[0] !== "Please select at least one character set" && (
-            <div className="p-4 rounded-xl border border-border bg-card flex flex-col gap-2.5">
+            <div className="flex shrink-0 flex-col gap-2 rounded-xl border border-border/50 bg-background/50 p-3">
               <div className="flex items-center justify-between text-xs font-semibold">
-                <span className="text-muted-foreground flex items-center gap-1">
+                <span className="flex items-center gap-1 text-muted-foreground">
                   {strengthInfo.score >= 75 ? (
                     <ShieldCheck className="h-4 w-4 text-emerald-500" />
                   ) : strengthInfo.score >= 50 ? (
@@ -212,60 +195,48 @@ export const PasswordTool: React.FC = () => {
                   ) : (
                     <ShieldAlert className="h-4 w-4 text-destructive" />
                   )}
-                  Strength Evaluation
+                  Strength
                 </span>
-                <span
-                  className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold text-white ${strengthInfo.color}`}
-                >
+                <span className={`rounded px-2 py-0.5 text-[10px] font-bold uppercase text-white ${strengthInfo.color}`}>
                   {strengthInfo.label}
                 </span>
               </div>
-
-              {/* Progress bar */}
-              <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
-                <div
-                  className={`h-full transition-all duration-500 rounded-full ${strengthInfo.color}`}
-                  style={{ width: `${strengthInfo.score}%` }}
-                />
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-background">
+                <div className={`h-full rounded-full transition-all duration-500 ${strengthInfo.color}`} style={{ width: `${strengthInfo.score}%` }} />
               </div>
-
-              <span className="text-[10px] text-muted-foreground leading-normal">{strengthInfo.description}</span>
+              <span className="text-[10px] leading-normal text-muted-foreground">{strengthInfo.description}</span>
             </div>
           )}
 
-          {/* Passwords results list */}
-          <div className="flex flex-col gap-2">
-            <div className="flex justify-between items-center">
-              <span className="text-sm font-semibold text-foreground/80">Generated Passwords</span>
+          <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-hidden">
+            <div className="flex shrink-0 items-center justify-between">
+              <span className="text-xs font-bold text-foreground/85">Generated passwords</span>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setShowPasswords(!showPasswords)}
-                className="h-8 text-xs text-muted-foreground hover:text-foreground"
+                className="h-7 text-xs text-muted-foreground hover:text-foreground"
               >
                 {showPasswords ? <EyeOff className="h-3.5 w-3.5 mr-1" /> : <Eye className="h-3.5 w-3.5 mr-1" />}
-                {showPasswords ? "Hide Value" : "Reveal Value"}
+                {showPasswords ? "Hide" : "Reveal"}
               </Button>
             </div>
-
-            <div className="flex flex-col gap-2.5 max-h-[350px] overflow-y-auto pr-1">
+            <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pr-1">
               {passwords.map((pwd, index) => (
                 <div
                   key={index}
-                  className="flex items-center justify-between p-2.5 rounded-xl border border-border/40 bg-background/50 hover:bg-background/80 transition-all font-mono text-sm leading-relaxed"
+                  className="flex items-center justify-between rounded-xl border border-border/50 bg-background/50 p-2.5 font-mono text-sm"
                 >
-                  <span className={`pl-2 break-all ${!showPasswords ? "select-none text-muted-foreground/60 filter blur-[3px]" : "text-foreground"}`}>
+                  <span className={`break-all pl-2 ${!showPasswords ? "select-none text-muted-foreground/60 blur-[3px]" : "text-foreground"}`}>
                     {pwd}
                   </span>
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <CopyButton value={pwd} size="sm" variant="ghost" />
-                  </div>
+                  <CopyButton value={pwd} size="sm" variant="ghost" />
                 </div>
               ))}
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </ToolShell>
   );
 };

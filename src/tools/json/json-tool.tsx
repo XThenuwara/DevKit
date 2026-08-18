@@ -378,7 +378,7 @@ export const JsonTool: React.FC = () => {
         }
         outputChildren={
           activeViewTab === "tree" && parsedData ? (
-            <div className="flex-1 w-full min-h-0 p-3 rounded-xl border border-border bg-card overflow-y-auto text-left flex flex-col gap-2 animate-in fade-in duration-200">
+            <div className="flex-1 w-full min-h-0 p-3 rounded-xl border border-border/50 bg-background overflow-y-auto text-left flex flex-col gap-2 animate-in fade-in duration-200">
               <div className="flex items-center gap-1 text-[10px] text-muted-foreground border-b border-border/20 pb-1.5 mb-1 font-semibold shrink-0">
                 <Info className="h-3 w-3 text-primary" />
                 Click keys to expand/collapse. Double-click any node to copy its specific value/subtree.
@@ -390,7 +390,7 @@ export const JsonTool: React.FC = () => {
             </div>
           ) : activeViewTab === "text" && outputJson ? (
             <pre
-              className="flex-1 w-full min-h-0 p-3 rounded-xl border border-border bg-card overflow-y-auto text-left font-mono text-xs leading-relaxed whitespace-pre-wrap break-all select-text animate-in fade-in duration-200"
+              className="flex-1 w-full min-h-0 p-3 rounded-xl border border-border/50 bg-background overflow-y-auto text-left font-mono text-xs leading-relaxed whitespace-pre-wrap break-all select-text animate-in fade-in duration-200"
               dangerouslySetInnerHTML={{ __html: syntaxHighlight(outputJson) }}
             />
           ) : undefined

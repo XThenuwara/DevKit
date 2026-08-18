@@ -2,6 +2,7 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "./copy-button";
 import { ArrowLeftRight, Trash2, ClipboardPaste } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface ToolLayoutProps {
   title?: string;
@@ -26,6 +27,35 @@ interface ToolLayoutProps {
   error?: string | null;
   outputChildren?: React.ReactNode;
 }
+
+export const ToolShell: React.FC<{
+  title: string;
+  description?: string;
+  actions?: React.ReactNode;
+  children: React.ReactNode;
+  className?: string;
+}> = ({ title, description, actions, children, className }) => (
+  <div className={cn("flex h-full min-h-0 w-full flex-col overflow-hidden animate-in fade-in duration-300", className)}>
+    <header className="flex shrink-0 flex-col gap-2 md:flex-row md:items-center md:justify-between">
+      <div className="flex min-w-0 flex-col gap-0.5">
+        <h1 className="text-base font-extrabold tracking-tight text-foreground">{title}</h1>
+        {description ? (
+          <p className="line-clamp-1 text-[11px] leading-normal text-muted-foreground/80" title={description}>
+            {description}
+          </p>
+        ) : null}
+      </div>
+      {actions ? <div className="shrink-0">{actions}</div> : null}
+    </header>
+    <div className="mt-3 flex min-h-0 flex-1 flex-col overflow-hidden">{children}</div>
+  </div>
+);
+
+export const ToolPanel: React.FC<{ className?: string; children: React.ReactNode }> = ({ className, children }) => (
+  <div className={cn("flex min-h-0 flex-col overflow-hidden rounded-xl border border-border/50 bg-background", className)}>
+    {children}
+  </div>
+);
 
 export const ToolLayout: React.FC<ToolLayoutProps> = ({
   title,
@@ -83,7 +113,7 @@ export const ToolLayout: React.FC<ToolLayoutProps> = ({
 
           {/* Configuration / Controls */}
           {controls && (
-            <div className="px-3 py-1.5 rounded-lg border border-border bg-card shadow-xs text-xs shrink-0 flex items-center">
+            <div className="px-3 py-1.5 rounded-lg border border-border/50 bg-background/50 text-xs shrink-0 flex items-center">
               {controls}
             </div>
           )}
@@ -136,7 +166,7 @@ export const ToolLayout: React.FC<ToolLayoutProps> = ({
                 value={inputValue}
                 onChange={(e) => onInputChange?.(e.target.value)}
                 placeholder={inputPlaceholder}
-                className="flex-1 w-full min-h-0 p-3 rounded-xl border border-border bg-background hover:bg-background/80 focus:bg-background focus:border-ring/50 focus:ring-1 focus:ring-ring/30 focus:outline-none transition-all resize-none font-mono text-xs leading-relaxed overflow-y-auto"
+                className="flex-1 w-full min-h-0 p-3 rounded-xl border border-border/50 bg-background hover:bg-background/80 focus:bg-background focus:border-ring/50 focus:ring-1 focus:ring-ring/30 focus:outline-none transition-all resize-none font-mono text-xs leading-relaxed overflow-y-auto"
               />
             </div>
           )}
@@ -174,8 +204,8 @@ export const ToolLayout: React.FC<ToolLayoutProps> = ({
                       readOnly
                       value={outputValue}
                       placeholder={outputPlaceholder}
-                      className={`flex-1 w-full min-h-0 p-3 rounded-xl border bg-muted/40 focus:outline-none transition-all resize-none font-mono text-xs leading-relaxed overflow-y-auto ${
-                        error ? "border-destructive text-destructive/90" : "border-border text-foreground"
+                      className={`flex-1 w-full min-h-0 p-3 rounded-xl border bg-background/50 focus:outline-none transition-all resize-none font-mono text-xs leading-relaxed overflow-y-auto ${
+                        error ? "border-destructive text-destructive/90" : "border-border/50 text-foreground"
                       }`}
                     />
                     {error && (

@@ -584,12 +584,12 @@ export function TextPipelineTool() {
     <div className="flex flex-col w-full h-full overflow-hidden animate-in fade-in duration-300">
 
       {/* ── Top Bar ─────────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between px-5 py-3 border-b border-border/50 shrink-0 bg-card/30">
+      <div className="flex items-center justify-between px-1 pb-3 shrink-0">
         <div className="flex items-center gap-2.5">
           <Workflow className="h-4 w-4 text-primary shrink-0" />
           <div>
-            <h1 className="text-sm font-bold text-foreground leading-tight">Text Pipeline</h1>
-            <p className="text-[10px] text-muted-foreground leading-tight">Chain transforms step by step</p>
+            <h1 className="text-base font-extrabold tracking-tight text-foreground leading-tight">Text Pipeline</h1>
+            <p className="text-[11px] text-muted-foreground/80 leading-tight">Chain transforms step by step</p>
           </div>
         </div>
 
