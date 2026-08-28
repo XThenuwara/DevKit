@@ -332,10 +332,6 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
                 <div className="flex-1 min-h-0 overflow-y-auto space-y-3 pr-2">
                   {hunks.map((hunk, idx) => {
                     const isActive = idx === activeHunkIndex;
-                    const origLinesCount = hunk.origLines.length || 1;
-                    const modLinesCount = hunk.modLines.length || 1;
-                    const maxLines = Math.max(origLinesCount, modLinesCount);
-                    const editorHeight = Math.max(90, maxLines * 22 + 28);
 
                     return (
                       <div
@@ -385,25 +381,27 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
                           </Button>
                         </div>
 
-                        {/* IntelliJ IDEA Ribbon Diff: Individual VS Code / Monaco Instances per Hunk */}
-                        <div className="grid grid-cols-[1fr_52px_1fr] items-stretch border-t border-border/20">
-                          {/* Left VS Code / Monaco Instance (Baseline snippet) */}
-                          <div className="flex flex-col border-r border-border/40 min-w-0 bg-red-500/5">
-                            <div className="bg-red-500/10 px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider text-red-700 dark:text-red-400 select-none border-b border-border/20">
+                        {/* IntelliJ IDEA Ribbon Diff: Clean High-Performance VS Code Snippet Block */}
+                        <div className="grid grid-cols-[1fr_52px_1fr] items-stretch border-t border-border/20 font-mono text-[11px]">
+                          {/* Left Side: Baseline snippet */}
+                          <div className="flex flex-col border-r border-border/40 min-w-0 bg-red-500/5 p-2 overflow-x-auto">
+                            <div className="text-[9px] font-bold uppercase tracking-wider text-red-700 dark:text-red-400 select-none pb-1 border-b border-border/20 mb-1.5">
                               Original Baseline ({hunk.origLines.length} lines)
                             </div>
-                            <CodeEditor
-                              value={hunk.origLines.join("\n") || " "}
-                              language={format}
-                              readOnly
-                              showFoldControls={false}
-                              height={`${editorHeight}px`}
-                              className="border-0 rounded-none flex-1"
-                            />
+                            {hunk.origLines.length === 0 ? (
+                              <p className="italic text-muted-foreground/50 text-[10px] py-1">(empty / line added)</p>
+                            ) : (
+                              hunk.origLines.map((line, lIdx) => (
+                                <div key={`orig-${lIdx}`} className="flex items-start text-red-700 dark:text-red-300 py-0.5 px-1 rounded bg-red-500/10 mb-0.5">
+                                  <span className="w-8 shrink-0 select-none text-[10px] opacity-60 font-mono">- {hunk.origStart + lIdx + 1}</span>
+                                  <pre className="font-mono whitespace-pre-wrap break-all">{line || " "}</pre>
+                                </div>
+                              ))
+                            )}
                           </div>
 
                           {/* Middle Ribbon Gutter with IntelliJ Rollback Chevron Arrow */}
-                          <div className="flex flex-col items-center justify-center border-r border-border/40 bg-muted/60 p-1 select-none">
+                          <div className="flex flex-col items-center justify-center border-r border-border/40 bg-muted/60 p-1.5 select-none">
                             <Button
                               variant={isActive ? "default" : "outline"}
                               size="icon-xs"
@@ -424,19 +422,21 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
                             </Button>
                           </div>
 
-                          {/* Right VS Code / Monaco Instance (Modified snippet) */}
-                          <div className="flex flex-col min-w-0 bg-emerald-500/5">
-                            <div className="bg-emerald-500/10 px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 select-none border-b border-border/20">
+                          {/* Right Side: Modified snippet */}
+                          <div className="flex flex-col min-w-0 bg-emerald-500/5 p-2 overflow-x-auto">
+                            <div className="text-[9px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 select-none pb-1 border-b border-border/20 mb-1.5">
                               Current Export ({hunk.modLines.length} lines)
                             </div>
-                            <CodeEditor
-                              value={hunk.modLines.join("\n") || " "}
-                              language={format}
-                              readOnly
-                              showFoldControls={false}
-                              height={`${editorHeight}px`}
-                              className="border-0 rounded-none flex-1"
-                            />
+                            {hunk.modLines.length === 0 ? (
+                              <p className="italic text-muted-foreground/50 text-[10px] py-1">(empty / line removed)</p>
+                            ) : (
+                              hunk.modLines.map((line, lIdx) => (
+                                <div key={`mod-${lIdx}`} className="flex items-start text-emerald-700 dark:text-emerald-300 py-0.5 px-1 rounded bg-emerald-500/10 mb-0.5">
+                                  <span className="w-8 shrink-0 select-none text-[10px] opacity-60 font-mono">+ {hunk.modStart + lIdx + 1}</span>
+                                  <pre className="font-mono whitespace-pre-wrap break-all">{line || " "}</pre>
+                                </div>
+                              ))
+                            )}
                           </div>
                         </div>
                       </div>
