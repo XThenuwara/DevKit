@@ -732,9 +732,16 @@ export const OpenApiTool: React.FC = () => {
         <div className="shrink-0 border-b border-border/50 px-3 py-2.5">
           <div className="flex items-center justify-between gap-2">
             <div className="min-w-0">
-              <p className="truncate text-xs font-bold">{spec?.info.title || "OpenAPI"}</p>
+              <div className="flex items-center gap-1.5 truncate">
+                <p className="truncate text-xs font-bold">{spec?.info.title || "OpenAPI"}</p>
+                {spec ? (
+                  <span className="shrink-0 rounded bg-primary/10 border border-primary/20 px-1.5 py-0.5 text-[9px] font-bold text-primary">
+                    v{spec.info.version || "1.0.0"}
+                  </span>
+                ) : null}
+              </div>
               <p className="truncate text-[10px] text-muted-foreground">
-                {spec ? `${operations.length} requests` : "No collection loaded"}
+                {spec ? `OpenAPI ${spec.openapi} · ${operations.length} requests` : "No collection loaded"}
               </p>
             </div>
             <Button variant="ghost" size="icon-xs" type="button" onClick={() => fileRef.current?.click()} title="Import">
@@ -890,6 +897,16 @@ export const OpenApiTool: React.FC = () => {
               <span className="truncate text-xs font-semibold">
                 {spec ? spec.info.title : "Drop a file or import an OpenAPI 3 spec"}
               </span>
+              {spec ? (
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <span className="rounded-md border border-primary/20 bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">
+                    OpenAPI {spec.openapi}
+                  </span>
+                  <span className="rounded-md border border-border/50 bg-muted px-2 py-0.5 text-[10px] font-mono font-medium text-muted-foreground">
+                    API v{spec.info.version || "1.0.0"}
+                  </span>
+                </div>
+              ) : null}
             </div>
           )}
           <div className="ml-auto flex items-center gap-1">

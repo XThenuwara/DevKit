@@ -403,6 +403,9 @@ export default function App() {
                 <span className="font-heading font-extrabold tracking-tight text-sm text-foreground">
                   DevKit Toolbox
                 </span>
+                <span className="px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-primary/10 text-primary border border-primary/20 shadow-2xs">
+                  v1.2.0
+                </span>
               </div>
 
               <div className="h-4 w-[1px] bg-stone-200/60 dark:bg-stone-800/60" />
