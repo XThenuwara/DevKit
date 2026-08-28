@@ -275,17 +275,19 @@ export const parseSpec = (text: string): { spec: OpenAPIDoc; format: SpecFormat 
     throw new Error("OpenAPI document must be an object.");
   }
 
-  const spec = parsed as OpenAPIDoc;
-  if (!spec.openapi || typeof spec.openapi !== "string") {
+  const rawObj = parsed as Record<string, unknown>;
+  const rawVersion = rawObj.openapi;
+  const versionStr = typeof rawVersion === "number" ? String(rawVersion) : typeof rawVersion === "string" ? rawVersion : "";
+
+  if (!versionStr) {
     throw new Error("Missing openapi version. This editor supports OpenAPI 3.0+.");
   }
-  if (!spec.openapi.startsWith("3.")) {
-    throw new Error(`Unsupported OpenAPI version "${spec.openapi}". Use 3.0 or 3.1.`);
-  }
-  if (!spec.info || typeof spec.info !== "object") {
-    throw new Error("Missing info object.");
+  if (!versionStr.startsWith("3")) {
+    throw new Error(`Unsupported OpenAPI version "${versionStr}". Use 3.0 or 3.1.`);
   }
 
+  const spec = parsed as OpenAPIDoc;
+  spec.openapi = versionStr.includes(".") ? versionStr : `${versionStr}.0.0`;
   spec.paths ??= {};
   spec.components ??= {};
   spec.components.schemas ??= {};

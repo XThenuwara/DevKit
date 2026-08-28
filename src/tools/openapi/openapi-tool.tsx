@@ -389,17 +389,50 @@ const SpecOverview: React.FC<{
   const [mode, setMode] = useState<"visual" | "swagger" | "source">("visual");
   const schemaNames = collectSchemaNames(spec);
 
+  const handleApplySource = () => {
+    try {
+      const parsed = parseSpec(sourceText);
+      onSpecChange(parsed.spec);
+      onFormatChange(parsed.format);
+      onParseError(null);
+    } catch (err) {
+      onParseError(err instanceof Error ? err.message : "Invalid document.");
+    }
+  };
+
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-background">
       <div className="shrink-0 flex items-center justify-between border-b border-border/50 bg-background/50 px-3 py-2">
-        <p className="text-xs font-bold">Collection overview</p>
-        <Tabs value={mode} onValueChange={(value) => setMode(value as "visual" | "swagger" | "source")}>
-          <TabsList className="h-7">
-            <TabsTrigger value="visual" className="h-6 px-2 text-[11px]">Info</TabsTrigger>
-            <TabsTrigger value="swagger" className="h-6 px-2 text-[11px]">Swagger</TabsTrigger>
-            <TabsTrigger value="source" className="h-6 px-2 text-[11px]">Source</TabsTrigger>
-          </TabsList>
-        </Tabs>
+        <div className="flex items-center gap-2">
+          <p className="text-xs font-bold">Collection overview</p>
+        </div>
+        <div className="flex items-center gap-2">
+          {mode === "source" ? (
+            <Button
+              size="sm"
+              className="h-6 px-2 text-[11px]"
+              type="button"
+              onClick={handleApplySource}
+            >
+              Apply Source
+            </Button>
+          ) : null}
+          <Tabs
+            value={mode}
+            onValueChange={(value) => {
+              if (mode === "source") {
+                handleApplySource();
+              }
+              setMode(value as "visual" | "swagger" | "source");
+            }}
+          >
+            <TabsList className="h-7">
+              <TabsTrigger value="visual" className="h-6 px-2 text-[11px]">Info</TabsTrigger>
+              <TabsTrigger value="swagger" className="h-6 px-2 text-[11px]">Swagger</TabsTrigger>
+              <TabsTrigger value="source" className="h-6 px-2 text-[11px]">Source</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
       </div>
       {mode === "swagger" ? (
         <SwaggerView spec={spec} onSelectOperation={onSelectOperation} />
@@ -408,16 +441,7 @@ const SpecOverview: React.FC<{
           <CodeEditor
             value={sourceText}
             onChange={onSourceChange}
-            onBlur={() => {
-              try {
-                const parsed = parseSpec(sourceText);
-                onSpecChange(parsed.spec);
-                onFormatChange(parsed.format);
-                onParseError(null);
-              } catch (err) {
-                onParseError(err instanceof Error ? err.message : "Invalid document.");
-              }
-            }}
+            onBlur={handleApplySource}
             language={format}
             height="100%"
             className="h-full rounded-none border-0"
