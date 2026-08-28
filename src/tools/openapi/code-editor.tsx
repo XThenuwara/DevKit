@@ -76,7 +76,10 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
 
   return (
-    <div className={`relative flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-background ${className}`}>
+    <div
+      className={`relative flex min-h-0 flex-col overflow-hidden bg-background ${className}`}
+      style={{ height: typeof height === "number" ? `${height}px` : height }}
+    >
       {showFoldControls ? (
         <div className="absolute top-1.5 right-1.5 z-10">
           <DropdownMenu>

@@ -335,7 +335,7 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
                     const origLinesCount = hunk.origLines.length || 1;
                     const modLinesCount = hunk.modLines.length || 1;
                     const maxLines = Math.max(origLinesCount, modLinesCount);
-                    const editorHeight = Math.min(320, Math.max(72, maxLines * 20 + 20));
+                    const editorHeight = Math.max(90, maxLines * 22 + 28);
 
                     return (
                       <div
