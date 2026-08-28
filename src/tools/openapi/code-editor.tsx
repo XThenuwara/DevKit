@@ -74,11 +74,36 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
 }) => {
   const dark = useIsDark();
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  // Monaco Editor needs a concrete pixel height to render.
+  // We use a ResizeObserver to track the container size and pass it to the Editor.
+  const [containerHeight, setContainerHeight] = useState<number>(300);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const h = entry.contentRect.height;
+        if (h > 0) setContainerHeight(h);
+      }
+    });
+    ro.observe(el);
+    // Also read immediately
+    const initial = el.getBoundingClientRect().height;
+    if (initial > 0) setContainerHeight(initial);
+    return () => ro.disconnect();
+  }, []);
 
   return (
     <div
       className={`relative flex min-h-0 flex-col overflow-hidden bg-background ${className}`}
-      style={{ height: typeof height === "number" ? `${height}px` : height }}
+      style={
+        height !== "100%"
+          ? { height: typeof height === "number" ? `${height}px` : height }
+          : { flex: 1, minHeight: 0 }
+      }
     >
       {showFoldControls ? (
         <div className="absolute top-1.5 right-1.5 z-10">
@@ -110,28 +135,27 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
           </DropdownMenu>
         </div>
       ) : null}
-      <div className="relative min-h-0 flex-1">
-        <div className="absolute inset-0">
-          <Editor
-            height={height}
-            language={language}
-            value={value}
-            theme={dark ? "vs-dark" : "vs"}
-            options={{ ...editorOptions, readOnly }}
-            onChange={(next) => onChange?.(next ?? "")}
-            onMount={(instance) => {
-              editorRef.current = instance;
-              onMount?.(instance);
-              if (onBlur) instance.onDidBlurEditorText(onBlur);
-            }}
-            beforeMount={(monaco: Monaco) => {
-              monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
-                validate: true,
-                allowComments: false,
-              });
-            }}
-          />
-        </div>
+      {/* This div is the one we observe for height */}
+      <div ref={containerRef} className="relative min-h-0 flex-1">
+        <Editor
+          height={`${containerHeight}px`}
+          language={language}
+          value={value}
+          theme={dark ? "vs-dark" : "vs"}
+          options={{ ...editorOptions, readOnly }}
+          onChange={(next) => onChange?.(next ?? "")}
+          onMount={(instance) => {
+            editorRef.current = instance;
+            onMount?.(instance);
+            if (onBlur) instance.onDidBlurEditorText(onBlur);
+          }}
+          beforeMount={(monaco: Monaco) => {
+            monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
+              validate: true,
+              allowComments: false,
+            });
+          }}
+        />
       </div>
     </div>
   );
@@ -155,12 +179,36 @@ export const CodeDiffEditor: React.FC<CodeDiffEditorProps> = ({
   onMount,
 }) => {
   const dark = useIsDark();
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [containerHeight, setContainerHeight] = useState<number>(400);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const h = entry.contentRect.height;
+        if (h > 0) setContainerHeight(h);
+      }
+    });
+    ro.observe(el);
+    const initial = el.getBoundingClientRect().height;
+    if (initial > 0) setContainerHeight(initial);
+    return () => ro.disconnect();
+  }, []);
 
   return (
-    <div className={`relative min-h-0 overflow-hidden bg-background ${className}`}>
-      <div className="absolute inset-0">
+    <div
+      className={`relative min-h-0 overflow-hidden bg-background ${className}`}
+      style={
+        height !== "100%"
+          ? { height: typeof height === "number" ? `${height}px` : height }
+          : { flex: 1, minHeight: 0 }
+      }
+    >
+      <div ref={containerRef} className="absolute inset-0">
         <DiffEditor
-          height={height}
+          height={`${containerHeight}px`}
           language={language}
           original={original}
           modified={modified}
