@@ -53,6 +53,7 @@ type CodeEditorProps = {
   value: string;
   onChange?: (value: string) => void;
   onBlur?: () => void;
+  onMount?: (instance: editor.IStandaloneCodeEditor) => void;
   language: CodeLanguage;
   readOnly?: boolean;
   className?: string;
@@ -64,6 +65,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   value,
   onChange,
   onBlur,
+  onMount,
   language,
   readOnly = false,
   className = "",
@@ -116,6 +118,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
             onChange={(next) => onChange?.(next ?? "")}
             onMount={(instance) => {
               editorRef.current = instance;
+              onMount?.(instance);
               if (onBlur) instance.onDidBlurEditorText(onBlur);
             }}
             beforeMount={(monaco: Monaco) => {
@@ -137,6 +140,7 @@ type CodeDiffEditorProps = {
   language: CodeLanguage;
   className?: string;
   height?: string | number;
+  onMount?: (diffEditor: editor.IStandaloneDiffEditor) => void;
 };
 
 export const CodeDiffEditor: React.FC<CodeDiffEditorProps> = ({
@@ -145,6 +149,7 @@ export const CodeDiffEditor: React.FC<CodeDiffEditorProps> = ({
   language,
   className = "",
   height = "100%",
+  onMount,
 }) => {
   const dark = useIsDark();
 
@@ -162,6 +167,9 @@ export const CodeDiffEditor: React.FC<CodeDiffEditorProps> = ({
             readOnly: true,
             renderSideBySide: true,
             enableSplitViewResizing: true,
+          }}
+          onMount={(instance) => {
+            onMount?.(instance);
           }}
         />
       </div>

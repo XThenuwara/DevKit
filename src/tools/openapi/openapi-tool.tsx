@@ -5,6 +5,7 @@ import {
   FileUp,
   FolderOpen,
   MoreHorizontal,
+  Pencil,
   Plus,
   Search,
   Sparkles,
@@ -14,6 +15,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { CopyButton } from "@/components/shared/copy-button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -570,6 +579,9 @@ export const OpenApiTool: React.FC = () => {
   const [spec, setSpec] = useState<OpenAPIDoc | null>(null);
   const [baselineSpec, setBaselineSpec] = useState<OpenAPIDoc | null>(null);
   const [format, setFormat] = useState<SpecFormat>("json");
+  const [fileName, setFileName] = useState<string>("openapi.json");
+  const [renameOpen, setRenameOpen] = useState(false);
+  const [renameInput, setRenameInput] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<{ path: string; method: HttpMethod } | null>(null);
@@ -652,6 +664,7 @@ export const OpenApiTool: React.FC = () => {
 
   const onUpload = async (file: File) => {
     const text = await file.text();
+    setFileName(file.name);
     setSourceText(text);
     loadText(text);
   };
@@ -905,6 +918,18 @@ export const OpenApiTool: React.FC = () => {
                   <span className="rounded-md border border-border/50 bg-muted px-2 py-0.5 text-[10px] font-mono font-medium text-muted-foreground">
                     API v{spec.info.version || "1.0.0"}
                   </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRenameInput(fileName);
+                      setRenameOpen(true);
+                    }}
+                    className="flex items-center gap-1 rounded-md border border-border/60 bg-background px-2 py-0.5 text-[10px] font-mono text-muted-foreground hover:text-foreground hover:border-border transition-all cursor-pointer"
+                    title="Click to rename export file"
+                  >
+                    <span>{fileName}</span>
+                    <Pencil className="h-2.5 w-2.5 opacity-60" />
+                  </button>
                 </div>
               ) : null}
             </div>
@@ -1028,6 +1053,7 @@ export const OpenApiTool: React.FC = () => {
           spec={spec}
           baselineSpec={baselineSpec}
           format={format}
+          fileName={fileName}
           onFormatChange={(next) => {
             setFormat(next);
             setSourceText(serializeSpec(spec, next));
@@ -1035,6 +1061,44 @@ export const OpenApiTool: React.FC = () => {
           onSpecChange={(next) => applySpec(next)}
         />
       ) : null}
+
+      <Dialog open={renameOpen} onOpenChange={setRenameOpen}>
+        <DialogContent className="max-w-md rounded-2xl p-4">
+          <DialogHeader>
+            <DialogTitle className="text-sm font-semibold">Rename Export File</DialogTitle>
+            <DialogDescription className="text-xs">
+              Specify the filename used when downloading or exporting this API specification.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-2">
+            <label className="flex flex-col gap-1.5 text-xs font-semibold">
+              <span>Filename</span>
+              <Input
+                value={renameInput}
+                onChange={(e) => setRenameInput(e.target.value)}
+                placeholder="petstore-openapi.yaml"
+                className="h-8 text-xs font-mono"
+              />
+            </label>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" size="sm" type="button" onClick={() => setRenameOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              type="button"
+              onClick={() => {
+                const trimmed = renameInput.trim();
+                if (trimmed) setFileName(trimmed);
+                setRenameOpen(false);
+              }}
+            >
+              Save Filename
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

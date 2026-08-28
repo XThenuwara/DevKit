@@ -9,6 +9,7 @@ import {
   ChevronDown,
   ArrowRight,
 } from "lucide-react";
+import type { editor } from "monaco-editor";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/shared/copy-button";
 import {
@@ -117,6 +118,7 @@ type ExportDialogProps = {
   spec: OpenAPIDoc;
   baselineSpec: OpenAPIDoc;
   format: SpecFormat;
+  fileName: string;
   onFormatChange: (format: SpecFormat) => void;
   onSpecChange: (spec: OpenAPIDoc) => void;
 };
@@ -127,12 +129,17 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
   spec,
   baselineSpec,
   format,
+  fileName,
   onFormatChange,
   onSpecChange,
 }) => {
   const [view, setView] = useState<"intellij" | "side-diff" | "export">("intellij");
   const [activeHunkIndex, setActiveHunkIndex] = useState<number>(0);
   const [rollbackError, setRollbackError] = useState<string | null>(null);
+
+  const diffEditorRef = useRef<editor.IStandaloneDiffEditor | null>(null);
+  const leftEditorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
+  const rightEditorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
 
   const exported = useMemo(() => serializeSpec(spec, format), [spec, format]);
   const original = useMemo(() => serializeSpec(baselineSpec, format), [baselineSpec, format]);
@@ -143,6 +150,24 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
       setActiveHunkIndex(hunks.length - 1);
     }
   }, [hunks.length, activeHunkIndex]);
+
+  const scrollToHunk = (idx: number) => {
+    if (hunks.length === 0) return;
+    const targetIdx = Math.max(0, Math.min(hunks.length - 1, idx));
+    setActiveHunkIndex(targetIdx);
+
+    const hunk = hunks[targetIdx];
+    if (view === "side-diff") {
+      if (idx > activeHunkIndex) {
+        diffEditorRef.current?.goToDiff("next");
+      } else {
+        diffEditorRef.current?.goToDiff("previous");
+      }
+    } else if (view === "intellij" && hunk) {
+      leftEditorRef.current?.revealLineInCenter(hunk.origStart + 1);
+      rightEditorRef.current?.revealLineInCenter(hunk.modStart + 1);
+    }
+  };
 
   const handleRollbackHunk = (hunk: DiffHunk) => {
     setRollbackError(null);
@@ -170,20 +195,10 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${spec.info.title.replace(/\s+/g, "-").toLowerCase() || "openapi"}.${format === "yaml" ? "yaml" : "json"}`;
+    a.download = fileName.trim() || `${spec.info.title.replace(/\s+/g, "-").toLowerCase() || "openapi"}.${format === "yaml" ? "yaml" : "json"}`;
     a.click();
     URL.revokeObjectURL(url);
     onOpenChange(false);
-  };
-
-  const hunkRefs = useRef<Record<number, HTMLDivElement | null>>({});
-
-  const scrollToHunk = (idx: number) => {
-    setActiveHunkIndex(idx);
-    const element = hunkRefs.current[idx];
-    if (element) {
-      element.scrollIntoView({ behavior: "smooth", block: "center" });
-    }
   };
 
   return (
@@ -195,7 +210,12 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
         <DialogHeader className="shrink-0 border-b border-border/50 bg-background/50 px-4 py-3">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <DialogTitle className="text-sm font-semibold">Export & IntelliJ Diff Viewer</DialogTitle>
+              <DialogTitle className="text-sm font-semibold flex items-center gap-2">
+                <span>Export & IntelliJ Diff Viewer</span>
+                <span className="rounded bg-muted px-2 py-0.5 font-mono text-[10px] font-medium text-muted-foreground">
+                  {fileName}
+                </span>
+              </DialogTitle>
               <DialogDescription className="text-xs">
                 Use top navigation arrows to step through changes. Click middle ribbon arrows to rollback line changes.
               </DialogDescription>
@@ -208,7 +228,7 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
 
         {/* Top Control Ribbon */}
         <div className="shrink-0 flex items-center justify-between gap-2 border-b border-border/50 px-4 py-2 bg-background/50">
-          {/* Change Navigation Arrows (IntelliJ Style) */}
+          {/* Change Navigation Arrows (IntelliJ & Monaco Compatible) */}
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-0.5 rounded-lg border border-border/60 bg-background p-0.5 shadow-2xs">
               <Button
@@ -217,7 +237,7 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
                 className="h-6 w-6"
                 type="button"
                 disabled={hunks.length === 0 || activeHunkIndex <= 0}
-                onClick={() => scrollToHunk(Math.max(0, activeHunkIndex - 1))}
+                onClick={() => scrollToHunk(activeHunkIndex - 1)}
                 title="Go to Previous Change"
               >
                 <ChevronUp className="h-4 w-4" />
@@ -228,7 +248,7 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
                 className="h-6 w-6"
                 type="button"
                 disabled={hunks.length === 0 || activeHunkIndex >= hunks.length - 1}
-                onClick={() => scrollToHunk(Math.min(hunks.length - 1, activeHunkIndex + 1))}
+                onClick={() => scrollToHunk(activeHunkIndex + 1)}
                 title="Go to Next Change"
               >
                 <ChevronDown className="h-4 w-4" />
@@ -308,114 +328,80 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
                   </p>
                 </div>
               ) : (
-                <div className="flex-1 min-h-0 overflow-y-auto space-y-3 pr-2">
-                  {hunks.map((hunk, idx) => {
-                    const isActive = idx === activeHunkIndex;
-
-                    return (
-                      <div
-                        key={hunk.id}
-                        ref={(el) => {
-                          hunkRefs.current[idx] = el;
+                <div className="grid grid-cols-[1fr_56px_1fr] h-full min-h-0 items-stretch rounded-xl border border-border/50 bg-card overflow-hidden">
+                  {/* Left VS Code / Monaco Instance (Baseline) */}
+                  <div className="flex min-h-0 flex-col border-r border-border/40 overflow-hidden">
+                    <div className="shrink-0 bg-muted/50 border-b border-border/40 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                      Original Import (Baseline)
+                    </div>
+                    <div className="flex-1 min-h-0">
+                      <CodeEditor
+                        value={original}
+                        language={format}
+                        readOnly
+                        showFoldControls={false}
+                        height="100%"
+                        className="h-full border-0 rounded-none"
+                        onMount={(instance) => {
+                          leftEditorRef.current = instance;
                         }}
-                        onClick={() => setActiveHunkIndex(idx)}
-                        className={`group relative rounded-xl border transition-all ${
-                          isActive
-                            ? "border-primary ring-2 ring-primary/30 shadow-md bg-card"
-                            : "border-border/60 bg-card/60 hover:border-border"
-                        }`}
-                      >
-                        {/* Hunk Header */}
-                        <div className="flex items-center justify-between border-b border-border/40 bg-muted/40 px-3 py-1 text-[11px]">
-                          <div className="flex items-center gap-2 font-mono font-semibold text-muted-foreground">
-                            <span>Change #{idx + 1}</span>
-                            <span>·</span>
-                            <span>Line {hunk.modStart + 1}</span>
-                            <span
-                              className={`px-1.5 py-0.2 rounded text-[10px] uppercase font-bold ${
-                                hunk.type === "added"
-                                  ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
-                                  : hunk.type === "removed"
-                                  ? "bg-red-500/15 text-red-700 dark:text-red-400"
-                                  : "bg-amber-500/15 text-amber-700 dark:text-amber-400"
-                              }`}
-                            >
-                              {hunk.type}
-                            </span>
-                          </div>
+                      />
+                    </div>
+                  </div>
 
+                  {/* Middle Ribbon Gutter with IntelliJ Rollback Arrows */}
+                  <div className="flex flex-col items-center border-r border-border/40 bg-muted/40 p-1.5 overflow-y-auto space-y-3">
+                    <p className="text-[8px] font-bold uppercase tracking-widest text-muted-foreground/60 select-none py-1">
+                      Rollback
+                    </p>
+                    {hunks.map((hunk, idx) => {
+                      const isActive = idx === activeHunkIndex;
+                      return (
+                        <div key={hunk.id} className="flex flex-col items-center gap-1 py-1">
                           <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 px-2 text-[11px] hover:bg-stone-500/20"
+                            variant={isActive ? "default" : "outline"}
+                            size="icon-xs"
+                            className={`h-7 w-7 rounded-full transition-all shadow-2xs hover:scale-110 active:scale-95 ${
+                              isActive
+                                ? "bg-primary text-primary-foreground ring-2 ring-primary/40"
+                                : "border-primary/40 bg-background hover:bg-primary hover:text-primary-foreground"
+                            }`}
                             type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
+                            onClick={() => {
+                              scrollToHunk(idx);
                               handleRollbackHunk(hunk);
                             }}
-                            title="Rollback this change hunk to original import baseline"
+                            title={`Rollback change #${idx + 1} at line ${hunk.modStart + 1}`}
                           >
-                            <RotateCcw className="h-3 w-3 mr-1" />
-                            Revert change
+                            <ArrowRight className="h-3.5 w-3.5" />
                           </Button>
+                          <span className="text-[9px] font-mono font-bold text-muted-foreground">
+                            #{idx + 1}
+                          </span>
                         </div>
+                      );
+                    })}
+                  </div>
 
-                        {/* IntelliJ IDEA Dual-Pane + Middle Ribbon Gutter */}
-                        <div className="grid grid-cols-[1fr_52px_1fr] items-stretch text-[11px] font-mono leading-relaxed">
-                          {/* Left Pane: Original Baseline Import */}
-                          <div className="bg-red-500/5 p-2 overflow-x-auto border-r border-border/40">
-                            <p className="text-[9px] uppercase font-bold text-muted-foreground/60 mb-1 select-none">
-                              Original Import (Baseline)
-                            </p>
-                            {hunk.origLines.length === 0 ? (
-                              <p className="italic text-muted-foreground/40 text-[10px]">(no line)</p>
-                            ) : (
-                              hunk.origLines.map((line, lIdx) => (
-                                <div key={`orig-${lIdx}`} className="flex items-start text-red-700 dark:text-red-300">
-                                  <span className="w-7 text-[10px] select-none opacity-40 font-mono">- {hunk.origStart + lIdx + 1}</span>
-                                  <pre className="font-mono whitespace-pre-wrap break-all">{line || " "}</pre>
-                                </div>
-                              ))
-                            )}
-                          </div>
-
-                          {/* Middle Ribbon Gutter with IntelliJ Rollback Chevron Arrow */}
-                          <div className="flex flex-col items-center justify-center bg-muted/60 border-r border-border/40 p-1">
-                            <Button
-                              variant="outline"
-                              size="icon-xs"
-                              className="h-7 w-7 rounded-full border-primary/40 bg-background shadow-xs hover:bg-primary hover:text-primary-foreground transition-all hover:scale-110 active:scale-95"
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleRollbackHunk(hunk);
-                              }}
-                              title="Rollback change (Copy baseline to current export)"
-                            >
-                              <ArrowRight className="h-3.5 w-3.5" />
-                            </Button>
-                          </div>
-
-                          {/* Right Pane: Current Export */}
-                          <div className="bg-emerald-500/5 p-2 overflow-x-auto">
-                            <p className="text-[9px] uppercase font-bold text-muted-foreground/60 mb-1 select-none">
-                              Current Export (Modified)
-                            </p>
-                            {hunk.modLines.length === 0 ? (
-                              <p className="italic text-muted-foreground/40 text-[10px]">(no line)</p>
-                            ) : (
-                              hunk.modLines.map((line, lIdx) => (
-                                <div key={`mod-${lIdx}`} className="flex items-start text-emerald-700 dark:text-emerald-300">
-                                  <span className="w-7 text-[10px] select-none opacity-40 font-mono">+ {hunk.modStart + lIdx + 1}</span>
-                                  <pre className="font-mono whitespace-pre-wrap break-all">{line || " "}</pre>
-                                </div>
-                              ))
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
+                  {/* Right VS Code / Monaco Instance (Modified) */}
+                  <div className="flex min-h-0 flex-col overflow-hidden">
+                    <div className="shrink-0 bg-muted/50 border-b border-border/40 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                      Current Export (Modified)
+                    </div>
+                    <div className="flex-1 min-h-0">
+                      <CodeEditor
+                        value={exported}
+                        language={format}
+                        readOnly
+                        showFoldControls={false}
+                        height="100%"
+                        className="h-full border-0 rounded-none"
+                        onMount={(instance) => {
+                          rightEditorRef.current = instance;
+                        }}
+                      />
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
@@ -431,6 +417,9 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
                 language={format}
                 className="flex-1 min-h-0"
                 height="100%"
+                onMount={(diffInstance) => {
+                  diffEditorRef.current = diffInstance;
+                }}
               />
             </div>
           ) : (
@@ -444,7 +433,7 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
           </Button>
           <Button size="sm" type="button" onClick={download}>
             <Download className="h-3.5 w-3.5 mr-1" />
-            Download
+            Download ({fileName})
           </Button>
         </DialogFooter>
       </DialogContent>
