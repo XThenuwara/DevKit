@@ -1032,6 +1032,7 @@ export const OpenApiTool: React.FC = () => {
             setFormat(next);
             setSourceText(serializeSpec(spec, next));
           }}
+          onSpecChange={(next) => applySpec(next)}
         />
       ) : null}
     </div>
