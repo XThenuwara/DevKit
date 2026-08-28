@@ -5,11 +5,13 @@ import {
   FileJson,
   FileUp,
   FolderOpen,
+  GitCompare,
   MoreHorizontal,
   Pencil,
   Plus,
   Search,
   Sparkles,
+  Terminal,
   Trash2,
   Upload,
 } from "lucide-react";
@@ -36,9 +38,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { BodySchemaPanel } from "./body-schema-panel";
-import { CodeEditor } from "./code-editor";
+import { CodeDiffEditor, CodeEditor } from "./code-editor";
 import { EndpointSidebar } from "./endpoint-sidebar";
 import { ExportDialog } from "./export-dialog";
+import { OperationDiffPanel } from "./operation-diff-panel";
 import { OperationYamlPanel } from "./operation-yaml-panel";
 import { ParametersPanel } from "./parameters-panel";
 import { SchemaCrumbEditor } from "./schema-crumb-editor";
@@ -55,6 +58,7 @@ import {
   collectSchemaNames,
   filterFieldCatalog,
   componentRef,
+  generateCurlCommand,
   getOperation,
   HTTP_METHODS,
   parseSpec,
@@ -119,6 +123,7 @@ const RequestEditor: React.FC<{
   onError: (message: string | null) => void;
 }> = ({ spec, path, method, format, onSpecChange, onError }) => {
   const [tab, setTab] = useState("params");
+  const [curlCopied, setCurlCopied] = useState(false);
   const pathItem = spec.paths?.[path];
   const operation = getOperation(spec, path, method);
   if (!operation || !pathItem) return null;
@@ -126,17 +131,43 @@ const RequestEditor: React.FC<{
   const patchOp = (next: OperationObject) => onSpecChange(updateOperation(spec, path, method, () => next));
   const related = collectOperationSchemaNames(spec, path, method);
 
+  const handleCopyCurl = () => {
+    const cmd = generateCurlCommand(spec, path, method);
+    void navigator.clipboard.writeText(cmd).then(() => {
+      setCurlCopied(true);
+      setTimeout(() => setCurlCopied(false), 2000);
+    });
+  };
+
   return (
     <Tabs value={tab} onValueChange={setTab} className="flex h-full min-h-0 flex-1 flex-col gap-0 overflow-hidden bg-background">
       <div className="flex shrink-0 items-center justify-between border-b border-border/50 px-3 py-2">
         <p className="text-xs font-bold">Request</p>
-        <TabsList className="h-7">
-          <TabsTrigger value="params" className="h-6 px-2.5 text-[11px]">Params</TabsTrigger>
-          <TabsTrigger value="body" className="h-6 px-2.5 text-[11px]">Body</TabsTrigger>
-          <TabsTrigger value="preview" className="h-6 px-2.5 text-[11px]">Swagger</TabsTrigger>
-          <TabsTrigger value="yaml" className="h-6 px-2.5 text-[11px]">Source</TabsTrigger>
-          <TabsTrigger value="docs" className="h-6 px-2.5 text-[11px]">Docs</TabsTrigger>
-        </TabsList>
+        <div className="flex items-center gap-2">
+          {/* cURL copy button */}
+          <button
+            type="button"
+            onClick={handleCopyCurl}
+            title="Copy as cURL"
+            className="flex items-center gap-1 rounded-md border border-border/60 bg-background px-2 py-1 text-[11px] font-mono font-medium text-muted-foreground hover:text-foreground hover:border-border transition-all cursor-pointer"
+          >
+            {curlCopied ? (
+              <><Check className="h-3 w-3 text-emerald-500" /><span className="text-emerald-600 dark:text-emerald-400">Copied!</span></>
+            ) : (
+              <><Terminal className="h-3 w-3" /><span>cURL</span></>
+            )}
+          </button>
+          <TabsList className="h-7">
+            <TabsTrigger value="params" className="h-6 px-2.5 text-[11px]">Params</TabsTrigger>
+            <TabsTrigger value="body" className="h-6 px-2.5 text-[11px]">Body</TabsTrigger>
+            <TabsTrigger value="preview" className="h-6 px-2.5 text-[11px]">Swagger</TabsTrigger>
+            <TabsTrigger value="yaml" className="h-6 px-2.5 text-[11px]">Source</TabsTrigger>
+            <TabsTrigger value="diff" className="h-6 px-2.5 text-[11px] flex items-center gap-1">
+              <GitCompare className="h-3 w-3" />Diff
+            </TabsTrigger>
+            <TabsTrigger value="docs" className="h-6 px-2.5 text-[11px]">Docs</TabsTrigger>
+          </TabsList>
+        </div>
       </div>
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         {tab === "params" ? (
@@ -183,6 +214,16 @@ const RequestEditor: React.FC<{
         ) : null}
         {tab === "yaml" ? (
           <OperationYamlPanel
+            spec={spec}
+            path={path}
+            method={method}
+            format={format}
+            onSpecChange={onSpecChange}
+            onError={onError}
+          />
+        ) : null}
+        {tab === "diff" ? (
+          <OperationDiffPanel
             spec={spec}
             path={path}
             method={method}
@@ -268,6 +309,7 @@ const RequestEditor: React.FC<{
     </Tabs>
   );
 };
+
 
 const ResponseEditor: React.FC<{
   spec: OpenAPIDoc;
@@ -396,8 +438,9 @@ const SpecOverview: React.FC<{
   onParseError: (message: string | null) => void;
   onSelectOperation?: (path: string, method: HttpMethod) => void;
 }> = ({ spec, format, sourceText, operationsCount, onSpecChange, onSourceChange, onFormatChange, onParseError, onSelectOperation }) => {
-  const [mode, setMode] = useState<"visual" | "swagger" | "source">("visual");
+  const [mode, setMode] = useState<"visual" | "swagger" | "source" | "diff">("visual");
   const [draftSource, setDraftSource] = useState(sourceText);
+  const [diffPasted, setDiffPasted] = useState("");
   const [appliedFeedback, setAppliedFeedback] = useState<string | null>(null);
   const schemaNames = collectSchemaNames(spec);
 
@@ -418,6 +461,21 @@ const SpecOverview: React.FC<{
       const msg = err instanceof Error ? err.message : "Invalid document.";
       onParseError(msg);
       setAppliedFeedback(null);
+    }
+  };
+
+  const handleApplyDiffPasted = () => {
+    if (!diffPasted.trim()) return;
+    try {
+      const parsed = parseSpec(diffPasted);
+      onSpecChange(parsed.spec);
+      onFormatChange(parsed.format);
+      onSourceChange(diffPasted);
+      onParseError(null);
+      setAppliedFeedback("Pasted collection applied!");
+      setTimeout(() => setAppliedFeedback(null), 3000);
+    } catch (err) {
+      onParseError(err instanceof Error ? err.message : "Invalid document.");
     }
   };
 
@@ -443,19 +501,32 @@ const SpecOverview: React.FC<{
               Apply Source
             </Button>
           ) : null}
+          {mode === "diff" && diffPasted.trim() ? (
+            <Button
+              size="sm"
+              className="h-6 px-2.5 text-[11px] font-semibold"
+              type="button"
+              onClick={handleApplyDiffPasted}
+            >
+              Apply Pasted
+            </Button>
+          ) : null}
           <Tabs
             value={mode}
             onValueChange={(value) => {
               if (mode === "source") {
                 handleApplySource();
               }
-              setMode(value as "visual" | "swagger" | "source");
+              setMode(value as "visual" | "swagger" | "source" | "diff");
             }}
           >
             <TabsList className="h-7">
               <TabsTrigger value="visual" className="h-6 px-2 text-[11px]">Info</TabsTrigger>
               <TabsTrigger value="swagger" className="h-6 px-2 text-[11px]">Swagger</TabsTrigger>
               <TabsTrigger value="source" className="h-6 px-2 text-[11px]">Source</TabsTrigger>
+              <TabsTrigger value="diff" className="h-6 px-2 text-[11px] flex items-center gap-1">
+                <GitCompare className="h-3 w-3" />Diff
+              </TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
@@ -475,6 +546,68 @@ const SpecOverview: React.FC<{
             height="100%"
             className="h-full rounded-none border-0"
           />
+        </div>
+      ) : mode === "diff" ? (
+        <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
+          {/* Column headers */}
+          <div className="shrink-0 grid grid-cols-2 border-b border-border/50">
+            <div className="px-3 py-1 text-[9px] font-bold uppercase tracking-wider text-muted-foreground border-r border-border/50 bg-muted/30">
+              Current Collection
+            </div>
+            <div className="px-3 py-1 text-[9px] font-bold uppercase tracking-wider text-muted-foreground bg-muted/30 flex items-center justify-between">
+              <span>Paste to compare</span>
+              {!diffPasted.trim() && (
+                <span className="font-normal normal-case text-muted-foreground/60">← paste a full OpenAPI spec here</span>
+              )}
+            </div>
+          </div>
+          {/* Side-by-side Monaco panes */}
+          <div className="flex-1 min-h-0 relative" style={{ minHeight: 0 }}>
+            <div className="absolute inset-0 grid grid-cols-2">
+              <div className="min-h-0 border-r border-border/50 overflow-hidden">
+                <CodeEditor
+                  value={draftSource}
+                  language={format}
+                  readOnly
+                  height="100%"
+                  showFoldControls={false}
+                  className="h-full border-0 rounded-none"
+                />
+              </div>
+              <div className="min-h-0 overflow-hidden">
+                <CodeEditor
+                  value={diffPasted}
+                  onChange={setDiffPasted}
+                  language={format}
+                  height="100%"
+                  showFoldControls={false}
+                  className="h-full border-0 rounded-none"
+                />
+              </div>
+            </div>
+          </div>
+          {/* Monaco DiffEditor below when there's content to compare */}
+          {diffPasted.trim() && diffPasted.trim() !== draftSource.trim() ? (
+            <>
+              <div className="shrink-0 border-t border-border/50 bg-muted/30 px-3 py-1 text-[9px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                <GitCompare className="h-3 w-3" />
+                Monaco Diff — Current vs Pasted
+              </div>
+              <div className="shrink-0 border-b border-border/50" style={{ height: "40%" }}>
+                <CodeDiffEditor
+                  original={draftSource}
+                  modified={diffPasted}
+                  language={format}
+                  height="100%"
+                  className="h-full border-0 rounded-none"
+                />
+              </div>
+            </>
+          ) : diffPasted.trim() ? (
+            <div className="shrink-0 border-t border-border/50 px-4 py-3 text-center text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 flex items-center justify-center gap-1.5">
+              <Check className="h-3.5 w-3.5" /> No differences — pasted collection matches current.
+            </div>
+          ) : null}
         </div>
       ) : (
         <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-3">

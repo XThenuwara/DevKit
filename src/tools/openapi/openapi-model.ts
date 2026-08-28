@@ -341,6 +341,88 @@ export const serializeSpec = (spec: OpenAPIDoc, format: SpecFormat) => {
   return JSON.stringify(spec, null, 2);
 };
 
+/** Generate an example value from a schema for use in curl body/query params. */
+const exampleFromSchema = (schema: SchemaObject | undefined, spec: OpenAPIDoc, depth = 0): unknown => {
+  if (!schema) return null;
+  // Follow $ref one level
+  if (schema.$ref) {
+    const refName = schema.$ref.split("/").pop() ?? "";
+    const resolved = spec.components?.schemas?.[refName];
+    return depth < 3 ? exampleFromSchema(resolved, spec, depth + 1) : `<${refName}>`;
+  }
+  if (schema.example !== undefined) return schema.example;
+  const type = Array.isArray(schema.type) ? schema.type[0] : schema.type;
+  if (type === "object" || schema.properties) {
+    const result: Record<string, unknown> = {};
+    for (const [key, prop] of Object.entries(schema.properties ?? {})) {
+      result[key] = exampleFromSchema(prop, spec, depth + 1);
+    }
+    return result;
+  }
+  if (type === "array" && schema.items) {
+    return [exampleFromSchema(schema.items, spec, depth + 1)];
+  }
+  if (type === "integer" || type === "number") return 0;
+  if (type === "boolean") return true;
+  if (schema.enum?.length) return schema.enum[0];
+  if (schema.format === "date-time") return new Date().toISOString();
+  if (schema.format === "date") return new Date().toISOString().split("T")[0];
+  if (schema.format === "uuid") return "00000000-0000-0000-0000-000000000000";
+  return "string";
+};
+
+/**
+ * Generate a curl command for the given operation.
+ * Uses the first server URL, example values for path/query params, and an example request body.
+ */
+export const generateCurlCommand = (spec: OpenAPIDoc, path: string, method: HttpMethod): string => {
+  const baseUrl = (spec.servers?.[0]?.url ?? "https://api.example.com").replace(/\/$/, "");
+  const operation = getOperation(spec, path, method);
+  const pathItem = spec.paths?.[path];
+
+  // Merge path-level + operation-level parameters
+  const allParams: ParameterObject[] = [
+    ...((pathItem?.parameters ?? []) as ParameterObject[]),
+    ...((operation?.parameters ?? []) as ParameterObject[]),
+  ];
+
+  // Replace path params with example values
+  let resolvedPath = path;
+  const queryParts: string[] = [];
+  for (const param of allParams) {
+    const example = exampleFromSchema(param.schema, spec);
+    const val = example !== null && example !== undefined ? String(example) : `{${param.name}}`;
+    if (param.in === "path") {
+      resolvedPath = resolvedPath.replace(`{${param.name}}`, encodeURIComponent(val));
+    } else if (param.in === "query") {
+      queryParts.push(`${encodeURIComponent(param.name)}=${encodeURIComponent(val)}`);
+    }
+  }
+
+  const queryString = queryParts.length ? `?${queryParts.join("&")}` : "";
+  const url = `${baseUrl}${resolvedPath}${queryString}`;
+  const parts: string[] = [`curl -X ${method.toUpperCase()}`];
+
+  // Request body
+  const bodyContent = operation?.requestBody?.content;
+  if (bodyContent) {
+    const contentType = Object.keys(bodyContent)[0] ?? "application/json";
+    parts.push(`  -H "Content-Type: ${contentType}"`);
+    const mediaSchema = bodyContent[contentType]?.schema;
+    const bodyExample =
+      bodyContent[contentType]?.example ??
+      exampleFromSchema(mediaSchema as SchemaObject, spec);
+    if (bodyExample !== null && bodyExample !== undefined) {
+      const bodyStr = JSON.stringify(bodyExample, null, 2)
+        .replace(/'/g, "'\\''");
+      parts.push(`  -d '${bodyStr}'`);
+    }
+  }
+
+  parts.push(`  '${url}'`);
+  return parts.join(" \\\n");
+};
+
 export const listOperations = (spec: OpenAPIDoc): OperationRef[] => {
   const ops: OperationRef[] = [];
   for (const [path, item] of Object.entries(spec.paths ?? {})) {
