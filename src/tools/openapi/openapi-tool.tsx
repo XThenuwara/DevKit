@@ -624,6 +624,12 @@ export const OpenApiTool: React.FC = () => {
     setFormat(nextFormat);
     setSourceText(serializeSpec(next, nextFormat));
     setError(null);
+    setSelected((prevSelected) => {
+      if (!prevSelected) return null;
+      const ops = listOperations(next);
+      const stillExists = ops.some((op) => op.path === prevSelected.path && op.method === prevSelected.method);
+      return stillExists ? prevSelected : (ops[0] ? { path: ops[0].path, method: ops[0].method } : null);
+    });
     if (resetBaseline) setBaselineSpec(cloneSpec(next));
   };
 

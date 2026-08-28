@@ -256,6 +256,31 @@ export const resolveRef = <T>(spec: OpenAPIDoc, value: T | { $ref: string } | un
   return bag?.[parsed.name];
 };
 
+const convertSwagger2ToOpenApi3 = (raw: Record<string, unknown>): Record<string, unknown> => {
+  const result: Record<string, unknown> = { ...raw };
+  result.openapi = "3.0.0";
+  delete result.swagger;
+
+  const host = typeof raw.host === "string" ? raw.host : "";
+  const basePath = typeof raw.basePath === "string" ? raw.basePath : "";
+  const schemes = Array.isArray(raw.schemes) ? raw.schemes : ["https"];
+  if (host) {
+    const scheme = schemes[0] || "https";
+    result.servers = [{ url: `${scheme}://${host}${basePath}`, description: "Default server" }];
+  }
+
+  const components = (raw.components && typeof raw.components === "object" ? { ...(raw.components as object) } : {}) as Record<string, unknown>;
+  if (raw.definitions && typeof raw.definitions === "object") {
+    components.schemas = { ...((components.schemas as object) || {}), ...(raw.definitions as object) };
+    delete result.definitions;
+  }
+  result.components = components;
+
+  let jsonStr = JSON.stringify(result);
+  jsonStr = jsonStr.replace(/#\/definitions\//g, "#/components/schemas/");
+  return JSON.parse(jsonStr) as Record<string, unknown>;
+};
+
 export const parseSpec = (text: string): { spec: OpenAPIDoc; format: SpecFormat } => {
   const trimmed = text.trim();
   if (!trimmed) throw new Error("Document is empty.");
@@ -275,18 +300,33 @@ export const parseSpec = (text: string): { spec: OpenAPIDoc; format: SpecFormat 
     throw new Error("OpenAPI document must be an object.");
   }
 
-  const rawObj = parsed as Record<string, unknown>;
+  let rawObj = parsed as Record<string, unknown>;
+
+  if (rawObj.swagger) {
+    rawObj = convertSwagger2ToOpenApi3(rawObj);
+  }
+
   const rawVersion = rawObj.openapi;
-  const versionStr = typeof rawVersion === "number" ? String(rawVersion) : typeof rawVersion === "string" ? rawVersion : "";
+  let versionStr = typeof rawVersion === "number" ? String(rawVersion) : typeof rawVersion === "string" ? rawVersion : "";
 
   if (!versionStr) {
-    throw new Error("Missing openapi version. This editor supports OpenAPI 3.0+.");
+    if (rawObj.paths || rawObj.info) {
+      versionStr = "3.0.0";
+      rawObj.openapi = versionStr;
+    } else {
+      throw new Error("Missing openapi version. This editor supports OpenAPI 3.0+ and Swagger 2.0.");
+    }
   }
+
   if (!versionStr.startsWith("3")) {
     throw new Error(`Unsupported OpenAPI version "${versionStr}". Use 3.0 or 3.1.`);
   }
 
-  const spec = parsed as OpenAPIDoc;
+  if (!rawObj.info || typeof rawObj.info !== "object") {
+    rawObj.info = { title: "API Specification", version: "1.0.0" };
+  }
+
+  const spec = rawObj as OpenAPIDoc;
   spec.openapi = versionStr.includes(".") ? versionStr : `${versionStr}.0.0`;
   spec.paths ??= {};
   spec.components ??= {};
