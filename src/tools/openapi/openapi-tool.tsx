@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
+  Check,
   Download,
   FileJson,
   FileUp,
@@ -396,16 +397,27 @@ const SpecOverview: React.FC<{
   onSelectOperation?: (path: string, method: HttpMethod) => void;
 }> = ({ spec, format, sourceText, operationsCount, onSpecChange, onSourceChange, onFormatChange, onParseError, onSelectOperation }) => {
   const [mode, setMode] = useState<"visual" | "swagger" | "source">("visual");
+  const [draftSource, setDraftSource] = useState(sourceText);
+  const [appliedFeedback, setAppliedFeedback] = useState<string | null>(null);
   const schemaNames = collectSchemaNames(spec);
+
+  useEffect(() => {
+    setDraftSource(sourceText);
+  }, [sourceText]);
 
   const handleApplySource = () => {
     try {
-      const parsed = parseSpec(sourceText);
+      const parsed = parseSpec(draftSource);
       onSpecChange(parsed.spec);
       onFormatChange(parsed.format);
+      onSourceChange(draftSource);
       onParseError(null);
+      setAppliedFeedback("Source applied successfully!");
+      setTimeout(() => setAppliedFeedback(null), 3000);
     } catch (err) {
-      onParseError(err instanceof Error ? err.message : "Invalid document.");
+      const msg = err instanceof Error ? err.message : "Invalid document.";
+      onParseError(msg);
+      setAppliedFeedback(null);
     }
   };
 
@@ -414,12 +426,17 @@ const SpecOverview: React.FC<{
       <div className="shrink-0 flex items-center justify-between border-b border-border/50 bg-background/50 px-3 py-2">
         <div className="flex items-center gap-2">
           <p className="text-xs font-bold">Collection overview</p>
+          {appliedFeedback ? (
+            <span className="flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+              <Check className="h-3.5 w-3.5" /> {appliedFeedback}
+            </span>
+          ) : null}
         </div>
         <div className="flex items-center gap-2">
           {mode === "source" ? (
             <Button
               size="sm"
-              className="h-6 px-2 text-[11px]"
+              className="h-6 px-2.5 text-[11px] font-semibold"
               type="button"
               onClick={handleApplySource}
             >
@@ -448,8 +465,11 @@ const SpecOverview: React.FC<{
       ) : mode === "source" ? (
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <CodeEditor
-            value={sourceText}
-            onChange={onSourceChange}
+            value={draftSource}
+            onChange={(val) => {
+              setDraftSource(val);
+              onSourceChange(val);
+            }}
             onBlur={handleApplySource}
             language={format}
             height="100%"
