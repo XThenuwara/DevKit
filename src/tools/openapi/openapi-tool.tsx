@@ -613,7 +613,6 @@ const SpecOverview: React.FC<{
             value={draftSource}
             onChange={(val) => {
               setDraftSource(val);
-              onSourceChange(val);
             }}
             onBlur={handleApplySource}
             language={format}
