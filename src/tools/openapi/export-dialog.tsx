@@ -137,6 +137,11 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
   const [activeHunkIndex, setActiveHunkIndex] = useState<number>(0);
   const [rollbackError, setRollbackError] = useState<string | null>(null);
 
+  // Editable draft for the right (current) panel and the export preview
+  const [rightDraft, setRightDraft] = useState<string | null>(null);
+  const [applyError, setApplyError] = useState<string | null>(null);
+  const [applyFeedback, setApplyFeedback] = useState<string | null>(null);
+
   const diffEditorRef = useRef<editor.IStandaloneDiffEditor | null>(null);
   const leftEditorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const rightEditorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
@@ -146,11 +151,33 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
   const original = useMemo(() => serializeSpec(baselineSpec, format), [baselineSpec, format]);
   const hunks = useMemo(() => computeDiffHunks(original, exported), [original, exported]);
 
+  // When spec changes externally (e.g. rollback), sync right draft to null (canonical)
+  useEffect(() => {
+    setRightDraft(null);
+    setApplyError(null);
+  }, [exported]);
+
   useEffect(() => {
     if (activeHunkIndex >= hunks.length && hunks.length > 0) {
       setActiveHunkIndex(hunks.length - 1);
     }
   }, [hunks.length, activeHunkIndex]);
+
+  /** Parse text and apply to spec. Returns true on success. */
+  const parseAndApply = (text: string): boolean => {
+    try {
+      const parsed = parseSpec(text);
+      onSpecChange(parsed.spec);
+      setApplyError(null);
+      setApplyFeedback("Changes applied!");
+      setTimeout(() => setApplyFeedback(null), 2500);
+      setRightDraft(null);
+      return true;
+    } catch (err) {
+      setApplyError(err instanceof Error ? err.message : "Could not parse document.");
+      return false;
+    }
+  };
 
   const scrollToHunk = (idx: number) => {
     if (hunks.length === 0) return;
@@ -206,6 +233,9 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
     onOpenChange(false);
   };
 
+  // Is there a pending unsaved draft in the right panel?
+  const hasDraft = rightDraft !== null && rightDraft !== exported;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
@@ -216,13 +246,18 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
           <div className="flex items-start justify-between gap-3">
             <div>
               <DialogTitle className="text-sm font-semibold flex items-center gap-2">
-                <span>Export & IntelliJ Diff Viewer</span>
+                <span>Export &amp; Diff Viewer</span>
                 <span className="rounded bg-muted px-2 py-0.5 font-mono text-[10px] font-medium text-muted-foreground">
                   {fileName}
                 </span>
+                {applyFeedback ? (
+                  <span className="flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                    <Check className="h-3.5 w-3.5" /> {applyFeedback}
+                  </span>
+                ) : null}
               </DialogTitle>
               <DialogDescription className="text-xs">
-                Use top navigation arrows to step through changes. Click middle ribbon arrows to rollback line changes.
+                Both panels are editable — type directly in the right panel or Monaco Diff and click Apply to update the spec.
               </DialogDescription>
             </div>
             <Button variant="ghost" size="icon-xs" type="button" onClick={() => onOpenChange(false)}>
@@ -233,7 +268,7 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
 
         {/* Top Control Ribbon */}
         <div className="shrink-0 flex items-center justify-between gap-2 border-b border-border/50 px-4 py-2 bg-background/50">
-          {/* Change Navigation Arrows */}
+          {/* Change Navigation */}
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-0.5 rounded-lg border border-border/60 bg-background p-0.5 shadow-2xs">
               <Button
@@ -243,7 +278,7 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
                 type="button"
                 disabled={hunks.length === 0 || activeHunkIndex <= 0}
                 onClick={() => scrollToHunk(activeHunkIndex - 1)}
-                title="Go to Previous Change"
+                title="Previous Change"
               >
                 <ChevronUp className="h-4 w-4" />
               </Button>
@@ -254,7 +289,7 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
                 type="button"
                 disabled={hunks.length === 0 || activeHunkIndex >= hunks.length - 1}
                 onClick={() => scrollToHunk(activeHunkIndex + 1)}
-                title="Go to Next Change"
+                title="Next Change"
               >
                 <ChevronDown className="h-4 w-4" />
               </Button>
@@ -269,35 +304,44 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
                 <Check className="h-3.5 w-3.5" /> In sync with import
               </span>
             )}
+
+            {/* Apply pending draft */}
+            {hasDraft ? (
+              <button
+                type="button"
+                className="flex items-center gap-1 rounded-md bg-primary px-2.5 py-1 text-[11px] font-semibold text-primary-foreground hover:bg-primary/90 transition-colors shadow-sm"
+                onClick={() => parseAndApply(rightDraft!)}
+              >
+                <Check className="h-3 w-3" /> Apply changes
+              </button>
+            ) : null}
           </div>
 
           <div className="flex items-center gap-2">
             <Tabs value={view} onValueChange={(v) => setView(v as "intellij" | "side-diff" | "export")}>
               <TabsList className="h-7">
                 <TabsTrigger value="intellij" className="h-6 px-2.5 text-[11px]">
-                  IntelliJ Ribbon Diff ({hunks.length})
+                  IntelliJ Ribbon ({hunks.length})
                 </TabsTrigger>
                 <TabsTrigger value="side-diff" className="h-6 px-2.5 text-[11px]">
                   Monaco Diff
                 </TabsTrigger>
                 <TabsTrigger value="export" className="h-6 px-2.5 text-[11px]">
-                  Export preview
+                  Edit &amp; Preview
                 </TabsTrigger>
               </TabsList>
             </Tabs>
 
             {hunks.length > 0 ? (
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-7 px-2 text-[11px] text-amber-600 hover:text-amber-700 dark:text-amber-400"
+              <button
                 type="button"
+                className="flex items-center gap-1 rounded-md border border-amber-400/60 px-2 py-1 text-[11px] font-medium text-amber-600 hover:text-amber-700 hover:border-amber-500 dark:text-amber-400 transition-colors"
                 onClick={handleRollbackAll}
-                title="Rollback all document changes to original import baseline"
+                title="Rollback all to baseline"
               >
-                <RotateCcw className="h-3 w-3 mr-1" />
+                <RotateCcw className="h-3 w-3 mr-0.5" />
                 Revert All ({hunks.length})
-              </Button>
+              </button>
             ) : null}
 
             <Select value={format} onValueChange={(value) => onFormatChange(value as SpecFormat)}>
@@ -310,14 +354,22 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
               </SelectContent>
             </Select>
 
-            <CopyButton value={exported} className="h-7 w-7" />
+            <CopyButton value={rightDraft ?? exported} className="h-7 w-7" />
           </div>
         </div>
 
-        {rollbackError ? (
+        {/* Error banners */}
+        {(rollbackError || applyError) ? (
           <div className="shrink-0 flex items-center gap-2 border-b border-destructive/30 bg-destructive/10 px-4 py-1.5 text-xs text-destructive">
             <AlertCircle className="h-4 w-4 shrink-0" />
-            <span>{rollbackError}</span>
+            <span>{rollbackError ?? applyError}</span>
+            <button
+              type="button"
+              className="ml-auto text-destructive/70 hover:text-destructive"
+              onClick={() => { setRollbackError(null); setApplyError(null); }}
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
           </div>
         ) : null}
 
@@ -334,7 +386,7 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
                 </div>
               ) : (
                 <div className="grid grid-cols-[1fr_64px_1fr] h-full min-h-0 items-stretch rounded-xl border border-border/50 bg-card overflow-hidden">
-                  {/* Left VS Code / Monaco Instance (Baseline) */}
+                  {/* Left — Baseline (read-only) */}
                   <div className="flex min-h-0 flex-col border-r border-border/40 overflow-hidden">
                     <div className="shrink-0 bg-muted/50 border-b border-border/40 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center justify-between">
                       <span>Original Import (Baseline)</span>
@@ -354,7 +406,7 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
                     </div>
                   </div>
 
-                  {/* Middle Ribbon Gutter with IntelliJ Rollback Arrows */}
+                  {/* Middle Ribbon Gutter */}
                   <div className="flex flex-col items-center border-r border-border/40 bg-muted/60 p-1.5 overflow-y-auto space-y-3 shrink-0">
                     <div className="shrink-0 text-[8px] font-bold uppercase tracking-widest text-muted-foreground/70 select-none py-1 text-center border-b border-border/30 w-full">
                       Rollback
@@ -385,7 +437,7 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
                               scrollToHunk(idx);
                               handleRollbackHunk(hunk);
                             }}
-                            title={`Rollback change #${idx + 1} at line ${hunk.modStart + 1} (Baseline → Export)`}
+                            title={`Rollback change #${idx + 1} at line ${hunk.modStart + 1}`}
                           >
                             <ArrowRight className="h-3.5 w-3.5" />
                           </Button>
@@ -408,17 +460,30 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
                     })}
                   </div>
 
-                  {/* Right VS Code / Monaco Instance (Modified) */}
+                  {/* Right — Current Export (EDITABLE) */}
                   <div className="flex min-h-0 flex-col overflow-hidden">
                     <div className="shrink-0 bg-muted/50 border-b border-border/40 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center justify-between">
-                      <span>Current Export (Modified)</span>
-                      <span className="text-[9px] text-muted-foreground/70 font-mono font-normal">Active Spec</span>
+                      <span>Current Export — <span className="text-primary">Editable</span></span>
+                      {hasDraft ? (
+                        <button
+                          type="button"
+                          className="flex items-center gap-1 rounded bg-primary px-2 py-0.5 text-[9px] font-bold text-primary-foreground hover:bg-primary/90 transition-colors"
+                          onClick={() => parseAndApply(rightDraft!)}
+                        >
+                          <Check className="h-2.5 w-2.5" /> Apply
+                        </button>
+                      ) : (
+                        <span className="text-[9px] text-primary/70 font-mono font-normal">Edit to apply</span>
+                      )}
                     </div>
                     <div className="flex-1 min-h-0">
                       <CodeEditor
-                        value={exported}
+                        value={rightDraft ?? exported}
+                        onChange={(v) => {
+                          setRightDraft(v);
+                          setApplyError(null);
+                        }}
                         language={format}
-                        readOnly
                         height="100%"
                         className="h-full border-0 rounded-none"
                         onMount={(instance) => {
@@ -433,22 +498,54 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
           ) : view === "side-diff" ? (
             <div className="flex h-full min-h-0 flex-col gap-2">
               <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                <span>Original import</span>
-                <span>Current export</span>
+                <span>Original import (read-only)</span>
+                <span className="text-primary">Current export — editable · edit the right side to apply changes</span>
               </div>
               <CodeDiffEditor
                 original={original}
-                modified={exported}
+                modified={rightDraft ?? exported}
                 language={format}
                 className="flex-1 min-h-0"
                 height="100%"
                 onMount={(diffInstance) => {
                   diffEditorRef.current = diffInstance;
                 }}
+                onModifiedChange={(v) => {
+                  setRightDraft(v);
+                  setApplyError(null);
+                }}
               />
             </div>
           ) : (
-            <CodeEditor value={exported} language={format} readOnly height="100%" className="h-full" />
+            /* Edit & Preview tab — fully editable */
+            <div className="flex h-full min-h-0 flex-col gap-2">
+              <div className="shrink-0 flex items-center justify-between">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Edit &amp; Preview — changes are applied to the live spec
+                </span>
+                {hasDraft ? (
+                  <button
+                    type="button"
+                    className="flex items-center gap-1 rounded-md bg-primary px-2.5 py-1 text-[11px] font-semibold text-primary-foreground hover:bg-primary/90 transition-colors shadow-sm"
+                    onClick={() => parseAndApply(rightDraft!)}
+                  >
+                    <Check className="h-3 w-3" /> Apply changes
+                  </button>
+                ) : (
+                  <span className="text-[10px] text-muted-foreground">Edit below then click Apply</span>
+                )}
+              </div>
+              <CodeEditor
+                value={rightDraft ?? exported}
+                onChange={(v) => {
+                  setRightDraft(v);
+                  setApplyError(null);
+                }}
+                language={format}
+                className="flex-1 min-h-0 rounded-xl"
+                height="100%"
+              />
+            </div>
           )}
         </div>
 
@@ -456,6 +553,15 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
           <Button variant="outline" size="sm" type="button" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
+          {hasDraft ? (
+            <button
+              type="button"
+              className="flex items-center gap-1 rounded-md bg-emerald-600 px-3 py-1.5 text-[12px] font-semibold text-white hover:bg-emerald-700 transition-colors shadow-sm"
+              onClick={() => parseAndApply(rightDraft!)}
+            >
+              <Check className="h-3.5 w-3.5" /> Apply &amp; Save
+            </button>
+          ) : null}
           <Button size="sm" type="button" onClick={download}>
             <Download className="h-3.5 w-3.5 mr-1" />
             Download ({fileName})

@@ -168,6 +168,8 @@ type CodeDiffEditorProps = {
   className?: string;
   height?: string | number;
   onMount?: (diffEditor: editor.IStandaloneDiffEditor) => void;
+  /** Called when the user edits the modified (right) pane */
+  onModifiedChange?: (value: string) => void;
 };
 
 export const CodeDiffEditor: React.FC<CodeDiffEditorProps> = ({
@@ -177,9 +179,11 @@ export const CodeDiffEditor: React.FC<CodeDiffEditorProps> = ({
   className = "",
   height = "100%",
   onMount,
+  onModifiedChange,
 }) => {
   const dark = useIsDark();
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const diffEditorRef = useRef<editor.IStandaloneDiffEditor | null>(null);
   const [containerHeight, setContainerHeight] = useState<number>(400);
 
   useEffect(() => {
@@ -196,6 +200,18 @@ export const CodeDiffEditor: React.FC<CodeDiffEditorProps> = ({
     if (initial > 0) setContainerHeight(initial);
     return () => ro.disconnect();
   }, []);
+
+  // When onModifiedChange is provided, listen to model content changes on the modified editor
+  const handleMount = (instance: editor.IStandaloneDiffEditor) => {
+    diffEditorRef.current = instance;
+    onMount?.(instance);
+    if (onModifiedChange) {
+      const modifiedModel = instance.getModifiedEditor();
+      modifiedModel.onDidChangeModelContent(() => {
+        onModifiedChange(modifiedModel.getValue());
+      });
+    }
+  };
 
   return (
     <div
@@ -215,13 +231,14 @@ export const CodeDiffEditor: React.FC<CodeDiffEditorProps> = ({
           theme={dark ? "vs-dark" : "vs"}
           options={{
             ...editorOptions,
-            readOnly: true,
+            // The original (left) side is always read-only.
+            // The modified (right) side is editable when onModifiedChange is provided.
+            readOnly: false,
+            originalEditable: false,
             renderSideBySide: true,
             enableSplitViewResizing: true,
           }}
-          onMount={(instance) => {
-            onMount?.(instance);
-          }}
+          onMount={handleMount}
         />
       </div>
     </div>
