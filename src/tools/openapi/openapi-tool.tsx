@@ -57,6 +57,8 @@ import {
   collectFieldCatalog,
   collectSchemaNames,
   filterFieldCatalog,
+  serializeOperationView,
+  mergeOperationView,
   componentRef,
   generateCurlCommand,
   getOperation,
@@ -176,7 +178,21 @@ const RequestEditor: React.FC<{
   format: SpecFormat;
   onSpecChange: (spec: OpenAPIDoc) => void;
   onError: (message: string | null) => void;
-}> = ({ spec, path, method, format, onSpecChange, onError }) => {
+  draftText?: string;
+  onDraftChange: (val: string) => void;
+  onApply: (spec: OpenAPIDoc, nextPath: string, nextMethod: HttpMethod) => void;
+}> = (props) => {
+  const {
+    spec,
+    path,
+    method,
+    format,
+    onSpecChange,
+    onError,
+    draftText,
+    onDraftChange,
+    onApply,
+  } = props;
   const [tab, setTab] = useState("params");
   const [curlCopied, setCurlCopied] = useState(false);
   const pathItem = spec.paths?.[path];
@@ -273,7 +289,9 @@ const RequestEditor: React.FC<{
             path={path}
             method={method}
             format={format}
-            onSpecChange={onSpecChange}
+            draftText={draftText}
+            onDraftChange={onDraftChange}
+            onApply={onApply}
             onError={onError}
           />
         ) : null}
@@ -830,6 +848,8 @@ export const OpenApiTool: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<{ path: string; method: HttpMethod } | null>(null);
+  const [operationDrafts, setOperationDrafts] = useState<Record<string, string>>({});
+  const [pendingSelection, setPendingSelection] = useState<{ path: string; method: HttpMethod } | null | "overview" | undefined>(undefined);
   const [pathDraft, setPathDraft] = useState("");
   const [newPath, setNewPath] = useState("/");
   const [newMethod, setNewMethod] = useState<HttpMethod>("get");
@@ -911,6 +931,69 @@ export const OpenApiTool: React.FC = () => {
       saveToRecents(entry);
       refreshRecents();
     }
+  };
+
+  const handleSelect = (nextSelection: { path: string; method: HttpMethod } | null | "overview") => {
+    if (selected && spec) {
+      const key = `${selected.method}:${selected.path}`;
+      const draft = operationDrafts[key];
+      if (draft !== undefined) {
+        try {
+          const generated = serializeOperationView(spec, selected.path, selected.method, format);
+          if (draft !== generated) {
+            setPendingSelection(nextSelection);
+            return;
+          } else {
+             // clean up draft if unmodified
+             const nextDrafts = { ...operationDrafts };
+             delete nextDrafts[key];
+             setOperationDrafts(nextDrafts);
+          }
+        } catch {
+          // ignore
+        }
+      }
+    }
+    setSelected(nextSelection === "overview" ? null : nextSelection);
+  };
+
+  const discardDraftAndProceed = () => {
+    if (selected) {
+      const key = `${selected.method}:${selected.path}`;
+      const nextDrafts = { ...operationDrafts };
+      delete nextDrafts[key];
+      setOperationDrafts(nextDrafts);
+    }
+    setSelected(pendingSelection === "overview" ? null : (pendingSelection as { path: string; method: HttpMethod } | null));
+    setPendingSelection(undefined);
+  };
+
+  const keepDraftAndProceed = () => {
+    setSelected(pendingSelection === "overview" ? null : (pendingSelection as { path: string; method: HttpMethod } | null));
+    setPendingSelection(undefined);
+  };
+
+  const saveDraftAndProceed = () => {
+    if (selected && spec) {
+      const key = `${selected.method}:${selected.path}`;
+      const draftText = operationDrafts[key];
+      if (draftText) {
+        try {
+          const { nextSpec } = mergeOperationView(spec, selected.path, selected.method, draftText, format);
+          applySpec(nextSpec);
+          
+          const nextDrafts = { ...operationDrafts };
+          delete nextDrafts[key];
+          setOperationDrafts(nextDrafts);
+        } catch (err) {
+          setError(err instanceof Error ? err.message : "Failed to save draft.");
+          setPendingSelection(undefined);
+          return;
+        }
+      }
+    }
+    setSelected(pendingSelection === "overview" ? null : (pendingSelection as { path: string; method: HttpMethod } | null));
+    setPendingSelection(undefined);
   };
 
   useEffect(() => {
@@ -1052,7 +1135,7 @@ export const OpenApiTool: React.FC = () => {
             <>
               <button
                 type="button"
-                onClick={() => setSelected(null)}
+                onClick={() => handleSelect("overview")}
                 className={`flex w-full items-center gap-2 border-b border-border/50 px-3 py-2 text-left text-xs ${
                   !selected ? "bg-background/50 font-semibold" : "hover:bg-background/50"
                 }`}
@@ -1065,7 +1148,7 @@ export const OpenApiTool: React.FC = () => {
                 operations={operations}
                 filtered={filtered}
                 selected={selected}
-                onSelect={setSelected}
+                onSelect={handleSelect}
                 onSpecChange={(next) => applySpec(next)}
               />
             </>
@@ -1337,6 +1420,21 @@ export const OpenApiTool: React.FC = () => {
                   format={format}
                   onSpecChange={(next) => applySpec(next)}
                   onError={setError}
+                  draftText={operationDrafts[`${selected.method}:${selected.path}`]}
+                  onDraftChange={(val) => {
+                    const key = `${selected.method}:${selected.path}`;
+                    setOperationDrafts((prev) => ({ ...prev, [key]: val }));
+                  }}
+                  onApply={(nextSpec, nextPath, nextMethod) => {
+                    const key = `${selected.method}:${selected.path}`;
+                    setOperationDrafts((prev) => {
+                      const next = { ...prev };
+                      delete next[key];
+                      return next;
+                    });
+                    applySpec(nextSpec);
+                    setSelected({ path: nextPath, method: nextMethod });
+                  }}
                 />
               </div>
               <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
@@ -1354,7 +1452,7 @@ export const OpenApiTool: React.FC = () => {
                 onSourceChange={setSourceText}
                 onFormatChange={setFormat}
                 onParseError={setError}
-                onSelectOperation={(opPath, opMethod) => setSelected({ path: opPath, method: opMethod })}
+                onSelectOperation={(opPath, opMethod) => handleSelect({ path: opPath, method: opMethod })}
               />
             </div>
           )}
@@ -1410,6 +1508,27 @@ export const OpenApiTool: React.FC = () => {
               }}
             >
               Save Filename
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={pendingSelection !== undefined} onOpenChange={(open) => { if (!open) setPendingSelection(undefined); }}>
+        <DialogContent className="max-w-md rounded-2xl p-4">
+          <DialogHeader>
+            <DialogTitle className="text-sm font-semibold">Unsaved Changes</DialogTitle>
+            <DialogDescription className="text-xs">
+              You have unsaved changes in the source view of the current operation. Do you want to apply them before switching?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:justify-start">
+            <Button variant="outline" size="sm" type="button" onClick={discardDraftAndProceed} className="text-destructive hover:text-destructive">
+              Discard Changes
+            </Button>
+            <Button variant="secondary" size="sm" type="button" onClick={keepDraftAndProceed}>
+              Keep as Draft
+            </Button>
+            <Button size="sm" type="button" onClick={saveDraftAndProceed}>
+              Apply Changes
             </Button>
           </DialogFooter>
         </DialogContent>

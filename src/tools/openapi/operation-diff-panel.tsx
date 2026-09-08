@@ -35,8 +35,8 @@ export const OperationDiffPanel: React.FC<{
   const handleApply = () => {
     if (!pasted.trim()) return;
     try {
-      const next = mergeOperationView(spec, path, method, pasted, format);
-      onSpecChange(next);
+      const { nextSpec } = mergeOperationView(spec, path, method, pasted, format);
+      onSpecChange(nextSpec);
       onError(null);
       setApplyFeedback("Applied!");
       setTimeout(() => setApplyFeedback(null), 2500);

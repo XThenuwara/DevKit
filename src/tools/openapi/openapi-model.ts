@@ -1251,7 +1251,7 @@ export const mergeOperationView = (
   method: HttpMethod,
   text: string,
   format: SpecFormat,
-): OpenAPIDoc => {
+): { nextSpec: OpenAPIDoc; nextPath: string; nextMethod: HttpMethod } => {
   const trimmed = text.trim();
   if (!trimmed) throw new Error("Snippet is empty.");
 
@@ -1270,9 +1270,14 @@ export const mergeOperationView = (
     throw new Error(`Missing path entry "${pathKey}".`);
   }
 
-  const operation = pathItem[method] as OperationObject | undefined;
+  const methodKeys = Object.keys(pathItem).filter(
+    (k) => !["parameters", "servers", "summary", "description"].includes(k)
+  );
+  const newMethodKey = (methodKeys[0] as HttpMethod | undefined) ?? method;
+
+  const operation = pathItem[newMethodKey] as OperationObject | undefined;
   if (!operation || typeof operation !== "object") {
-    throw new Error(`Missing ${method.toUpperCase()} operation under "${pathKey}".`);
+    throw new Error(`Missing ${newMethodKey.toUpperCase()} operation under "${pathKey}".`);
   }
 
   const writes = new Map<string, unknown>();
@@ -1292,7 +1297,7 @@ export const mergeOperationView = (
   }
 
   const previousPath = spec.paths?.[pathKey] ?? spec.paths?.[path];
-  const previousOp = getOperation(spec, pathKey, method) ?? getOperation(spec, path, method);
+  const previousOp = getOperation(spec, pathKey, newMethodKey) ?? getOperation(spec, path, method);
   const { parameters, ...operationRest } = pathItem;
   void operationRest;
 
@@ -1302,9 +1307,16 @@ export const mergeOperationView = (
   const nextOperation = reattachRefs(previousOp, cloneSpec(operation), spec, writes, skipWrites) as OperationObject;
 
   let next = applyComponentWrites(spec, writes);
+  
+  if (pathKey !== path || newMethodKey !== method) {
+    next = removeOperation(next, path, method);
+  }
+
   if (nextParameters) {
     next = updatePathItem(next, pathKey, (item) => ({ ...item, parameters: nextParameters }));
   }
-  next = updateOperation(next, pathKey, method, () => nextOperation);
-  return next;
+  next = updateOperation(next, pathKey, newMethodKey, () => nextOperation);
+  
+  // Return the new path and method as well, so the UI can stay in sync
+  return { nextSpec: next, nextPath: pathKey, nextMethod: newMethodKey };
 };
