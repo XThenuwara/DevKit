@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Check,
   Download,
@@ -113,6 +113,61 @@ const Section: React.FC<{ title: string; action?: React.ReactNode; children: Rea
     <div className={fill ? "min-h-0 flex-1 overflow-hidden p-3" : "p-3 space-y-3"}>{children}</div>
   </section>
 );
+
+/**
+ * DraftField — an <Input> that buffers keystrokes locally and only calls
+ * onCommit (which writes to the spec) on blur or Enter.
+ * Prevents the entire spec tree from re-rendering on every keystroke.
+ */
+const DraftField: React.FC<{
+  value: string;
+  onCommit: (value: string) => void;
+  className?: string;
+  placeholder?: string;
+}> = ({ value, onCommit, className, placeholder }) => {
+  const [draft, setDraft] = useState(value);
+  const committed = useRef(value);
+  useEffect(() => {
+    if (value !== committed.current) { setDraft(value); committed.current = value; }
+  }, [value]);
+  const commit = (v: string) => { if (v !== committed.current) { committed.current = v; onCommit(v); } };
+  return (
+    <Input
+      value={draft}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={(e) => commit(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") { e.preventDefault(); commit((e.target as HTMLInputElement).value); (e.target as HTMLInputElement).blur(); }
+        if (e.key === "Escape") { setDraft(committed.current); (e.target as HTMLInputElement).blur(); }
+      }}
+      className={className}
+      placeholder={placeholder}
+    />
+  );
+};
+
+const DraftTextarea: React.FC<{
+  value: string;
+  onCommit: (value: string) => void;
+  className?: string;
+  placeholder?: string;
+}> = ({ value, onCommit, className, placeholder }) => {
+  const [draft, setDraft] = useState(value);
+  const committed = useRef(value);
+  useEffect(() => {
+    if (value !== committed.current) { setDraft(value); committed.current = value; }
+  }, [value]);
+  const commit = (v: string) => { if (v !== committed.current) { committed.current = v; onCommit(v); } };
+  return (
+    <Textarea
+      value={draft}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={(e) => commit(e.target.value)}
+      className={className}
+      placeholder={placeholder}
+    />
+  );
+};
 
 const RequestEditor: React.FC<{
   spec: OpenAPIDoc;
@@ -239,39 +294,40 @@ const RequestEditor: React.FC<{
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div className="flex flex-col gap-1.5">
                     <FieldLabel>Summary</FieldLabel>
-                    <Input
+                    <DraftField
                       value={operation.summary ?? ""}
-                      onChange={(e) => patchOp({ ...operation, summary: e.target.value })}
+                      onCommit={(v) => patchOp({ ...operation, summary: v })}
                       className="h-8 text-xs"
                     />
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <FieldLabel>Operation ID</FieldLabel>
-                    <Input
+                    <DraftField
                       value={operation.operationId ?? ""}
-                      onChange={(e) => patchOp({ ...operation, operationId: e.target.value })}
+                      onCommit={(v) => patchOp({ ...operation, operationId: v })}
                       className="h-8 text-xs font-mono"
                     />
                   </div>
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <FieldLabel>Tags</FieldLabel>
-                  <Input
+                  <DraftField
                     value={(operation.tags ?? []).join(", ")}
-                    onChange={(e) =>
+                    onCommit={(v) =>
                       patchOp({
                         ...operation,
-                        tags: e.target.value.split(",").map((item) => item.trim()).filter(Boolean),
+                        tags: v.split(",").map((item) => item.trim()).filter(Boolean),
                       })
                     }
                     className="h-8 text-xs"
+                    placeholder="tag1, tag2"
                   />
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <FieldLabel>Description</FieldLabel>
-                  <Textarea
+                  <DraftTextarea
                     value={operation.description ?? ""}
-                    onChange={(e) => patchOp({ ...operation, description: e.target.value })}
+                    onCommit={(v) => patchOp({ ...operation, description: v })}
                     className="min-h-[140px] text-xs"
                   />
                 </div>
@@ -615,26 +671,26 @@ const SpecOverview: React.FC<{
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <label className="flex flex-col gap-1">
                 <FieldLabel>Title</FieldLabel>
-                <Input
+                <DraftField
                   value={spec.info.title}
-                  onChange={(e) => onSpecChange({ ...spec, info: { ...spec.info, title: e.target.value } })}
+                  onCommit={(v) => onSpecChange({ ...spec, info: { ...spec.info, title: v } })}
                   className="h-8 text-xs bg-background"
                 />
               </label>
               <label className="flex flex-col gap-1">
                 <FieldLabel>Version</FieldLabel>
-                <Input
+                <DraftField
                   value={spec.info.version}
-                  onChange={(e) => onSpecChange({ ...spec, info: { ...spec.info, version: e.target.value } })}
+                  onCommit={(v) => onSpecChange({ ...spec, info: { ...spec.info, version: v } })}
                   className="h-8 text-xs bg-background"
                 />
               </label>
             </div>
             <label className="flex flex-col gap-1">
               <FieldLabel>Description</FieldLabel>
-              <Textarea
+              <DraftTextarea
                 value={spec.info.description ?? ""}
-                onChange={(e) => onSpecChange({ ...spec, info: { ...spec.info, description: e.target.value } })}
+                onCommit={(v) => onSpecChange({ ...spec, info: { ...spec.info, description: v } })}
                 className="min-h-[72px] text-xs bg-background"
               />
             </label>
@@ -725,6 +781,42 @@ const SpecOverview: React.FC<{
   );
 };
 
+// ─── LocalStorage Recents ────────────────────────────────────────────────────
+
+const LS_RECENTS_KEY = "devkit_openapi_recents";
+const MAX_RECENTS = 8;
+
+type RecentEntry = {
+  id: string;
+  title: string;
+  version: string;
+  format: SpecFormat;
+  fileName: string;
+  savedAt: string; // ISO
+  sourceText: string;
+};
+
+const loadRecents = (): RecentEntry[] => {
+  try {
+    return JSON.parse(localStorage.getItem(LS_RECENTS_KEY) ?? "[]") as RecentEntry[];
+  } catch {
+    return [];
+  }
+};
+
+const saveToRecents = (entry: RecentEntry) => {
+  const existing = loadRecents().filter((r) => r.id !== entry.id);
+  const next = [entry, ...existing].slice(0, MAX_RECENTS);
+  try { localStorage.setItem(LS_RECENTS_KEY, JSON.stringify(next)); } catch { /* quota */ }
+};
+
+const removeRecent = (id: string) => {
+  const next = loadRecents().filter((r) => r.id !== id);
+  try { localStorage.setItem(LS_RECENTS_KEY, JSON.stringify(next)); } catch { /* quota */ }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 export const OpenApiTool: React.FC = () => {
   const fileRef = useRef<HTMLInputElement>(null);
   const dragCount = useRef(0);
@@ -745,6 +837,13 @@ export const OpenApiTool: React.FC = () => {
   const [pathAnchor, setPathAnchor] = useState<HTMLElement | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
+  // Recents
+  const [recents, setRecents] = useState<RecentEntry[]>(() => loadRecents());
+  // Stable ID for the current spec session (generated when a new spec is loaded)
+  const specIdRef = useRef<string | null>(null);
+
+  // Sync recents from localStorage whenever we need to refresh the list
+  const refreshRecents = useCallback(() => setRecents(loadRecents()), []);
 
   const operations = useMemo(() => (spec ? listOperations(spec) : []), [spec]);
   const filtered = useMemo(() => {
@@ -785,9 +884,10 @@ export const OpenApiTool: React.FC = () => {
   }, [fieldCatalog, pathCatalog, newPath]);
 
   const applySpec = (next: OpenAPIDoc, nextFormat = format, resetBaseline = false) => {
+    const serialized = serializeSpec(next, nextFormat);
     setSpec(next);
     setFormat(nextFormat);
-    setSourceText(serializeSpec(next, nextFormat));
+    setSourceText(serialized);
     setError(null);
     setSelected((prevSelected) => {
       if (!prevSelected) return null;
@@ -796,6 +896,21 @@ export const OpenApiTool: React.FC = () => {
       return stillExists ? prevSelected : (ops[0] ? { path: ops[0].path, method: ops[0].method } : null);
     });
     if (resetBaseline) setBaselineSpec(cloneSpec(next));
+    // Auto-save to recents (debounced via the stable specIdRef)
+    if (specIdRef.current) {
+      const currentFileName = fileName; // captured at call time
+      const entry: RecentEntry = {
+        id: specIdRef.current,
+        title: next.info.title || "Untitled API",
+        version: next.info.version || "1.0.0",
+        format: nextFormat,
+        fileName: currentFileName,
+        savedAt: new Date().toISOString(),
+        sourceText: serialized,
+      };
+      saveToRecents(entry);
+      refreshRecents();
+    }
   };
 
   useEffect(() => {
@@ -805,6 +920,8 @@ export const OpenApiTool: React.FC = () => {
   const loadText = (text: string, keepSelection = false) => {
     try {
       const parsed = parseSpec(text);
+      // Assign a new stable session ID when loading a fresh spec
+      specIdRef.current = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
       applySpec(parsed.spec, parsed.format, true);
       if (!keepSelection) {
         const ops = listOperations(parsed.spec);
@@ -1145,7 +1262,7 @@ export const OpenApiTool: React.FC = () => {
 
         <div className="flex min-h-0 flex-1 overflow-hidden">
           {!spec ? (
-            <div className="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-center">
+            <div className="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-center overflow-y-auto">
               <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-dashed border-border/50 bg-background/50">
                 <Upload className="h-7 w-7 text-muted-foreground" />
               </div>
@@ -1164,6 +1281,51 @@ export const OpenApiTool: React.FC = () => {
               <Button size="sm" className="h-8 text-xs" type="button" onClick={() => loadText(sourceText)} disabled={!sourceText.trim()}>
                 Parse document
               </Button>
+
+              {/* Recents */}
+              {recents.length > 0 ? (
+                <div className="w-full max-w-xl mt-2">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground text-left">Recent</p>
+                    <button
+                      type="button"
+                      onClick={() => { localStorage.removeItem(LS_RECENTS_KEY); refreshRecents(); }}
+                      className="text-[10px] text-muted-foreground hover:text-destructive transition-colors"
+                    >
+                      Clear all
+                    </button>
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    {recents.map((entry) => (
+                      <div
+                        key={entry.id}
+                        className="group flex items-center gap-3 rounded-lg border border-border/50 bg-background/50 px-3 py-2 hover:border-primary/40 hover:bg-primary/5 transition-all cursor-pointer text-left"
+                        onClick={() => {
+                          setFileName(entry.fileName);
+                          loadText(entry.sourceText);
+                        }}
+                      >
+                        <FileJson className="h-4 w-4 shrink-0 text-muted-foreground group-hover:text-primary" />
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-xs font-semibold">{entry.title}</p>
+                          <p className="truncate text-[10px] text-muted-foreground">
+                            {entry.fileName} · {entry.format.toUpperCase()} · v{entry.version} ·{" "}
+                            {new Date(entry.savedAt).toLocaleString()}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          className="shrink-0 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all"
+                          onClick={(e) => { e.stopPropagation(); removeRecent(entry.id); refreshRecents(); }}
+                          title="Remove from recents"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
             </div>
           ) : selected ? (
             <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row">

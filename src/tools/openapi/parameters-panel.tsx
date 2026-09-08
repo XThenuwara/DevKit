@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Maximize2, MoreHorizontal, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -17,7 +17,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
+
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   collectFieldCatalog,
@@ -48,6 +48,67 @@ const IN_TONE: Record<ParameterObject["in"], string> = {
   query: "bg-sky-500/15 text-sky-800 dark:text-sky-300",
   header: "bg-violet-500/15 text-violet-800 dark:text-violet-300",
   cookie: "bg-stone-500/15 text-stone-700 dark:text-stone-300",
+};
+
+/**
+ * DraftInput — keeps its own local text state and only calls onCommit
+ * (which triggers a spec write + full re-render) on blur or Enter.
+ * This eliminates expensive per-keystroke re-renders of the whole spec tree.
+ */
+const DraftInput: React.FC<{
+  value: string;
+  onCommit: (value: string) => void;
+  className?: string;
+  placeholder?: string;
+  onFocusCb?: (e: React.FocusEvent<HTMLInputElement>) => void;
+  onBlurCb?: () => void;
+  onChangeCb?: (value: string) => void;
+}> = ({ value, onCommit, className, placeholder, onFocusCb, onBlurCb, onChangeCb }) => {
+  const [draft, setDraft] = useState(value);
+  const committed = useRef(value);
+
+  // Sync when the canonical value changes externally (e.g. suggestion applied)
+  useEffect(() => {
+    if (value !== committed.current) {
+      setDraft(value);
+      committed.current = value;
+    }
+  }, [value]);
+
+  const commit = (v: string) => {
+    if (v !== committed.current) {
+      committed.current = v;
+      onCommit(v);
+    }
+  };
+
+  return (
+    <input
+      className={`flex rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 ${className ?? ""}`}
+      value={draft}
+      onChange={(e) => {
+        setDraft(e.target.value);
+        onChangeCb?.(e.target.value);
+      }}
+      onBlur={(e) => {
+        commit(e.target.value);
+        onBlurCb?.();
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          commit((e.target as HTMLInputElement).value);
+          (e.target as HTMLInputElement).blur();
+        }
+        if (e.key === "Escape") {
+          setDraft(committed.current);
+          (e.target as HTMLInputElement).blur();
+        }
+      }}
+      onFocus={onFocusCb}
+      placeholder={placeholder}
+    />
+  );
 };
 
 type ParamRow = {
@@ -186,25 +247,28 @@ export const ParametersTable: React.FC<ParametersTableProps> = ({
                   }`}
                 >
               <div className="relative">
-                <Input
+                <DraftInput
                   value={param.name}
-                  onFocus={(e) => {
+                  onCommit={(v) => {
+                    patch(row, { ...param, name: v });
+                    setActiveName(null);
+                    setAnchor(null);
+                  }}
+                  className={`${CELL} text-xs font-mono`}
+                  placeholder="name"
+                  onFocusCb={(e) => {
                     setActiveName(rowKey);
                     setAnchor(e.currentTarget);
                   }}
-                  onBlur={() =>
+                  onBlurCb={() =>
                     setTimeout(() => {
                       setActiveName((current) => (current === rowKey ? null : current));
                       setAnchor(null);
                     }, 150)
                   }
-                  onChange={(e) => {
-                    patch(row, { ...param, name: e.target.value });
+                  onChangeCb={() => {
                     setActiveName(rowKey);
-                    setAnchor(e.currentTarget);
                   }}
-                  className={`${CELL} text-xs font-mono`}
-                  placeholder="name"
                 />
                 <SuggestMenu
                   open={activeName === rowKey}
@@ -303,16 +367,15 @@ export const ParametersTable: React.FC<ParametersTableProps> = ({
                   disabled={param.in === "path"}
                 />
               </label>
-              <Input
+              <DraftInput
                 value={param.description ?? ""}
-                onChange={(e) => patch(row, { ...param, description: e.target.value })}
+                onCommit={(v) => patch(row, { ...param, description: v || undefined })}
                 className={`${CELL} text-xs`}
                 placeholder="Description"
               />
-              <Input
+              <DraftInput
                 value={schema.example !== undefined ? String(schema.example) : ""}
-                onChange={(e) => {
-                  const raw = e.target.value;
+                onCommit={(raw) => {
                   let example: unknown = raw;
                   if (type === "integer") example = raw ? Number.parseInt(raw, 10) : undefined;
                   else if (type === "number") example = raw ? Number.parseFloat(raw) : undefined;
