@@ -575,15 +575,49 @@ const SpecOverview: React.FC<{
               Apply Source
             </Button>
           ) : null}
-          {mode === "diff" && diffPasted.trim() ? (
-            <Button
-              size="sm"
-              className="h-6 px-2.5 text-[11px] font-semibold"
-              type="button"
-              onClick={handleApplyDiffPasted}
-            >
-              Apply Pasted
-            </Button>
+          {mode === "diff" ? (
+            <>
+              <input
+                type="file"
+                id="import-global-diff"
+                className="hidden"
+                accept=".json,.yaml,.yml,application/json,text/yaml"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    const text = await file.text();
+                    setDiffPasted(text);
+                  }
+                  e.target.value = "";
+                }}
+              />
+              <Button variant="outline" size="sm" className="h-6 px-2 text-[11px] font-semibold" type="button" asChild>
+                <label htmlFor="import-global-diff" className="cursor-pointer">
+                  Import Spec
+                </label>
+              </Button>
+              {diffPasted.trim() ? (
+                <>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2.5 text-[11px] font-semibold"
+                    type="button"
+                    onClick={() => setDiffPasted("")}
+                  >
+                    Clear
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="h-6 px-2.5 text-[11px] font-semibold"
+                    type="button"
+                    onClick={handleApplyDiffPasted}
+                  >
+                    Apply Pasted
+                  </Button>
+                </>
+              ) : null}
+            </>
           ) : null}
           <Tabs
             value={mode}
@@ -621,7 +655,22 @@ const SpecOverview: React.FC<{
           />
         </div>
       ) : mode === "diff" ? (
-        <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
+        <div 
+          className="flex h-full min-h-0 flex-1 flex-col overflow-hidden"
+          onDragOver={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
+          onDrop={async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const file = e.dataTransfer.files?.[0];
+            if (file) {
+              const text = await file.text();
+              setDiffPasted(text);
+            }
+          }}
+        >
           {/* Column headers */}
           <div className="shrink-0 grid grid-cols-2 border-b border-border/50">
             <div className="px-3 py-1 text-[9px] font-bold uppercase tracking-wider text-muted-foreground border-r border-border/50 bg-muted/30">
@@ -630,7 +679,7 @@ const SpecOverview: React.FC<{
             <div className="px-3 py-1 text-[9px] font-bold uppercase tracking-wider text-muted-foreground bg-muted/30 flex items-center justify-between">
               <span>Paste to compare</span>
               {!diffPasted.trim() && (
-                <span className="font-normal normal-case text-muted-foreground/60">← paste a full OpenAPI spec here</span>
+                <span className="font-normal normal-case text-muted-foreground/60">← paste or drop a full OpenAPI spec here</span>
               )}
             </div>
           </div>
@@ -673,6 +722,7 @@ const SpecOverview: React.FC<{
                   language={format}
                   height="100%"
                   className="h-full border-0 rounded-none"
+                  onModifiedChange={setDiffPasted}
                 />
               </div>
             </>
@@ -1044,6 +1094,7 @@ export const OpenApiTool: React.FC = () => {
     };
     const onDrop = (e: DragEvent) => {
       if (!hasFiles(e)) return;
+      if (e.defaultPrevented) return;
       e.preventDefault();
       dragCount.current = 0;
       setDragOver(false);

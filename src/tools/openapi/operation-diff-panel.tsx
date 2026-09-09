@@ -46,7 +46,22 @@ export const OperationDiffPanel: React.FC<{
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
+    <div 
+      className="flex h-full min-h-0 flex-1 flex-col overflow-hidden"
+      onDragOver={(e) => {
+        e.preventDefault();
+        e.stopPropagation(); // prevent window drop handler
+      }}
+      onDrop={async (e) => {
+        e.preventDefault();
+        e.stopPropagation(); // prevent window drop handler
+        const file = e.dataTransfer.files?.[0];
+        if (file) {
+          const text = await file.text();
+          setPasted(text);
+        }
+      }}
+    >
       {/* Toolbar */}
       <div className="shrink-0 flex items-center justify-between gap-2 border-b border-border/50 px-3 py-2">
         <div className="flex items-center gap-2 min-w-0">
@@ -60,6 +75,25 @@ export const OperationDiffPanel: React.FC<{
         </div>
         <div className="flex items-center gap-1.5">
           <CopyButton value={current} className="h-7 w-7" />
+          <input
+            type="file"
+            id="import-diff-snippet"
+            className="hidden"
+            accept=".json,.yaml,.yml,application/json,text/yaml"
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              if (file) {
+                const text = await file.text();
+                setPasted(text);
+              }
+              e.target.value = "";
+            }}
+          />
+          <Button variant="outline" size="sm" className="h-7 px-2 text-[11px]" type="button" asChild>
+            <label htmlFor="import-diff-snippet" className="cursor-pointer">
+              Import Snippet
+            </label>
+          </Button>
           <Button
             variant="ghost"
             size="sm"
@@ -92,7 +126,7 @@ export const OperationDiffPanel: React.FC<{
           <div className="px-3 py-1 text-[9px] font-bold uppercase tracking-wider text-muted-foreground bg-muted/30 flex items-center justify-between">
             <span>Paste to compare</span>
             {!pasted.trim() && (
-              <span className="font-normal normal-case text-muted-foreground/60">← paste an operation snippet here</span>
+              <span className="font-normal normal-case text-muted-foreground/60">← paste or drop an operation file here</span>
             )}
           </div>
         </div>
@@ -139,6 +173,7 @@ export const OperationDiffPanel: React.FC<{
                 language={format}
                 height="100%"
                 className="h-full border-0 rounded-none"
+                onModifiedChange={setPasted}
               />
             </div>
           </>
