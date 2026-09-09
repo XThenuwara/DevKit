@@ -42,6 +42,7 @@ import { CodeDiffEditor, CodeEditor } from "./code-editor";
 import { EndpointSidebar } from "./endpoint-sidebar";
 import { ExportDialog } from "./export-dialog";
 import { OperationDiffPanel } from "./operation-diff-panel";
+import { OperationRefsPanel } from "./operation-refs-panel";
 import { OperationYamlPanel } from "./operation-yaml-panel";
 import { ParametersPanel } from "./parameters-panel";
 import { SchemaCrumbEditor } from "./schema-crumb-editor";
@@ -233,6 +234,7 @@ const RequestEditor: React.FC<{
             <TabsTrigger value="body" className="h-6 px-2.5 text-[11px]">Body</TabsTrigger>
             <TabsTrigger value="preview" className="h-6 px-2.5 text-[11px]">Swagger</TabsTrigger>
             <TabsTrigger value="yaml" className="h-6 px-2.5 text-[11px]">Source</TabsTrigger>
+            <TabsTrigger value="refs" className="h-6 px-2.5 text-[11px]">Refs</TabsTrigger>
             <TabsTrigger value="diff" className="h-6 px-2.5 text-[11px] flex items-center gap-1">
               <GitCompare className="h-3 w-3" />Diff
             </TabsTrigger>
@@ -292,6 +294,16 @@ const RequestEditor: React.FC<{
             draftText={draftText}
             onDraftChange={onDraftChange}
             onApply={onApply}
+            onError={onError}
+          />
+        ) : null}
+        {tab === "refs" ? (
+          <OperationRefsPanel
+            spec={spec}
+            path={path}
+            method={method}
+            format={format}
+            onSpecChange={onSpecChange}
             onError={onError}
           />
         ) : null}
