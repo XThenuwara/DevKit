@@ -897,7 +897,7 @@ export const OpenApiTool: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<{ path: string; method: HttpMethod } | null>(null);
-  const [operationDrafts, setOperationDrafts] = useState<Record<string, string>>({});
+  const operationDrafts = useRef<Record<string, string>>({});
   const [pendingSelection, setPendingSelection] = useState<{ path: string; method: HttpMethod } | null | "overview" | undefined>(undefined);
   const [pathDraft, setPathDraft] = useState("");
   const [newPath, setNewPath] = useState("/");
@@ -985,7 +985,7 @@ export const OpenApiTool: React.FC = () => {
   const handleSelect = (nextSelection: { path: string; method: HttpMethod } | null | "overview") => {
     if (selected && spec) {
       const key = `${selected.method}:${selected.path}`;
-      const draft = operationDrafts[key];
+      const draft = operationDrafts.current[key];
       if (draft !== undefined) {
         try {
           const generated = serializeOperationView(spec, selected.path, selected.method, format);
@@ -994,9 +994,7 @@ export const OpenApiTool: React.FC = () => {
             return;
           } else {
              // clean up draft if unmodified
-             const nextDrafts = { ...operationDrafts };
-             delete nextDrafts[key];
-             setOperationDrafts(nextDrafts);
+             delete operationDrafts.current[key];
           }
         } catch {
           // ignore
@@ -1009,9 +1007,7 @@ export const OpenApiTool: React.FC = () => {
   const discardDraftAndProceed = () => {
     if (selected) {
       const key = `${selected.method}:${selected.path}`;
-      const nextDrafts = { ...operationDrafts };
-      delete nextDrafts[key];
-      setOperationDrafts(nextDrafts);
+      delete operationDrafts.current[key];
     }
     setSelected(pendingSelection === "overview" ? null : (pendingSelection as { path: string; method: HttpMethod } | null));
     setPendingSelection(undefined);
@@ -1025,15 +1021,13 @@ export const OpenApiTool: React.FC = () => {
   const saveDraftAndProceed = () => {
     if (selected && spec) {
       const key = `${selected.method}:${selected.path}`;
-      const draftText = operationDrafts[key];
+      const draftText = operationDrafts.current[key];
       if (draftText) {
         try {
           const { nextSpec } = mergeOperationView(spec, selected.path, selected.method, draftText, format);
           applySpec(nextSpec);
           
-          const nextDrafts = { ...operationDrafts };
-          delete nextDrafts[key];
-          setOperationDrafts(nextDrafts);
+          delete operationDrafts.current[key];
         } catch (err) {
           setError(err instanceof Error ? err.message : "Failed to save draft.");
           setPendingSelection(undefined);
@@ -1183,16 +1177,17 @@ export const OpenApiTool: React.FC = () => {
             </div>
           ) : (
             <>
-              <button
-                type="button"
-                onClick={() => handleSelect("overview")}
-                className={`flex w-full items-center gap-2 border-b border-border/50 px-3 py-2 text-left text-xs ${
-                  !selected ? "bg-background/50 font-semibold" : "hover:bg-background/50"
-                }`}
-              >
-                <FolderOpen className="h-3.5 w-3.5 text-muted-foreground" />
-                Overview
-              </button>
+              <div className="p-2 border-b border-border/50 bg-background/50">
+                <Button
+                  variant={!selected ? "secondary" : "ghost"}
+                  size="sm"
+                  className={`w-full justify-start text-xs ${!selected ? "font-bold shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                  onClick={() => handleSelect("overview")}
+                >
+                  <FolderOpen className="h-3.5 w-3.5 mr-2" />
+                  Collection Overview
+                </Button>
+              </div>
               <EndpointSidebar
                 spec={spec}
                 operations={operations}
@@ -1470,18 +1465,14 @@ export const OpenApiTool: React.FC = () => {
                   format={format}
                   onSpecChange={(next) => applySpec(next)}
                   onError={setError}
-                  draftText={operationDrafts[`${selected.method}:${selected.path}`]}
+                  draftText={operationDrafts.current[`${selected.method}:${selected.path}`]}
                   onDraftChange={(val) => {
                     const key = `${selected.method}:${selected.path}`;
-                    setOperationDrafts((prev) => ({ ...prev, [key]: val }));
+                    operationDrafts.current[key] = val;
                   }}
                   onApply={(nextSpec, nextPath, nextMethod) => {
                     const key = `${selected.method}:${selected.path}`;
-                    setOperationDrafts((prev) => {
-                      const next = { ...prev };
-                      delete next[key];
-                      return next;
-                    });
+                    delete operationDrafts.current[key];
                     applySpec(nextSpec);
                     setSelected({ path: nextPath, method: nextMethod });
                   }}

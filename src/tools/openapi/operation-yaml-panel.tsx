@@ -20,8 +20,19 @@ export const OperationYamlPanel: React.FC<{
     [spec, path, method, format],
   );
 
-  const currentText = draftText ?? generated;
-  const dirty = draftText !== undefined && draftText !== generated;
+  const [localText, setLocalText] = React.useState(draftText ?? generated);
+
+  React.useEffect(() => {
+    setLocalText(draftText ?? generated);
+  }, [path, method, format, draftText, generated]);
+
+  const currentText = localText;
+  const dirty = localText !== generated;
+
+  const handleChange = (val: string) => {
+    setLocalText(val);
+    onDraftChange(val);
+  };
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
@@ -70,7 +81,7 @@ export const OperationYamlPanel: React.FC<{
       <div className="relative min-h-0 flex-1">
         <CodeEditor
           value={currentText}
-          onChange={onDraftChange}
+          onChange={handleChange}
           language={format}
           height="100%"
           className="h-full rounded-none border-0"
