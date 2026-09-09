@@ -246,7 +246,7 @@ export const ParametersTable: React.FC<ParametersTableProps> = ({
                     visualIndex % 2 === 0 ? "bg-transparent" : "bg-background/50"
                   }`}
                 >
-              <div className="relative">
+              <div className="relative flex items-center">
                 <DraftInput
                   value={param.name}
                   onCommit={(v) => {
@@ -270,6 +270,7 @@ export const ParametersTable: React.FC<ParametersTableProps> = ({
                     setActiveName(rowKey);
                   }}
                 />
+                {param.required ? <span className="absolute right-2.5 text-red-500 font-bold text-xs pointer-events-none">*</span> : null}
                 <SuggestMenu
                   open={activeName === rowKey}
                   anchor={activeName === rowKey ? anchor : null}

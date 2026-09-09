@@ -1226,7 +1226,7 @@ export const buildOperationView = (spec: OpenAPIDoc, path: string, method: HttpM
   if (pathItem.parameters?.length) pathEntry.parameters = cloneSpec(pathItem.parameters);
   pathEntry[method] = cloneSpec(operation);
 
-  const schemaNames = collectDirectOperationSchemaNames(spec, path, method);
+  const schemaNames = collectOperationSchemaNames(spec, path, method);
   const view: Record<string, unknown> = { [path]: pathEntry };
   if (schemaNames.length) {
     const schemas: Record<string, SchemaObject> = {};
