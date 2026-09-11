@@ -76,6 +76,7 @@ const BodyEditor: React.FC<BodyEditorProps> = ({
   const [exampleDraft, setExampleDraft] = useState("");
   const [exampleDirty, setExampleDirty] = useState(false);
   const [schemaDraft, setSchemaDraft] = useState("");
+  const [schemaDirty, setSchemaDirty] = useState(false);
   const types = contentTypes(content);
   const [contentType, setContentType] = useState(types[0] || "application/json");
   const activeType = types.includes(contentType) ? contentType : types[0] || "application/json";
@@ -131,8 +132,8 @@ const BodyEditor: React.FC<BodyEditorProps> = ({
   }, [exampleText, exampleDirty]);
 
   useEffect(() => {
-    setSchemaDraft(schemaJson);
-  }, [schemaJson]);
+    if (!schemaDirty) setSchemaDraft(schemaJson);
+  }, [schemaJson, schemaDirty]);
 
   const commitSchema = (next: SchemaObject, targetName?: string | null) => {
     const target =
@@ -145,6 +146,15 @@ const BodyEditor: React.FC<BodyEditorProps> = ({
       ...content,
       [activeType]: { ...content?.[activeType], schema: next },
     });
+  };
+
+  const applySchema = () => {
+    try {
+      commitSchema(JSON.parse(schemaDraft) as SchemaObject, schemaTargetName);
+      setSchemaDirty(false);
+    } catch {
+      // Ignore invalid json
+    }
   };
 
   const addField = () => {
@@ -252,6 +262,11 @@ const BodyEditor: React.FC<BodyEditorProps> = ({
               Save example
             </Button>
           ) : null}
+          {view === "schema" && schemaDirty ? (
+            <Button size="sm" className="h-6 px-2 text-[10px]" type="button" onClick={applySchema}>
+              Save schema
+            </Button>
+          ) : null}
           <CopyButton value={view === "example" ? exampleDraft : schemaDraft} className="h-6 w-6" />
         </div>
       </div>
@@ -274,11 +289,7 @@ const BodyEditor: React.FC<BodyEditorProps> = ({
                 value={schemaDraft}
                 onChange={(value) => {
                   setSchemaDraft(value);
-                  try {
-                    commitSchema(JSON.parse(value) as SchemaObject, schemaTargetName);
-                  } catch {
-                    /* keep typing */
-                  }
+                  setSchemaDirty(value !== schemaJson);
                 }}
                 language="json"
                 height="100%"

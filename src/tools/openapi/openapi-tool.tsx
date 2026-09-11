@@ -172,6 +172,33 @@ const DraftTextarea: React.FC<{
   );
 };
 
+const SidebarFilterInput: React.FC<{
+  disabled: boolean;
+  onQueryChange: (val: string) => void;
+}> = ({ disabled, onQueryChange }) => {
+  const [local, setLocal] = useState("");
+  
+  useEffect(() => {
+    const t = setTimeout(() => {
+      onQueryChange(local);
+    }, 150);
+    return () => clearTimeout(t);
+  }, [local, onQueryChange]);
+
+  return (
+    <div className="relative mt-2">
+      <Search className="pointer-events-none absolute left-2 top-2 h-3.5 w-3.5 text-muted-foreground" />
+      <Input
+        value={local}
+        onChange={(e) => setLocal(e.target.value)}
+        placeholder="Filter requests"
+        className="h-7 pl-7 text-xs bg-background"
+        disabled={disabled}
+      />
+    </div>
+  );
+};
+
 const RequestEditor: React.FC<{
   spec: OpenAPIDoc;
   path: string;
@@ -1170,16 +1197,7 @@ export const OpenApiTool: React.FC = () => {
               <FileUp className="h-3.5 w-3.5" />
             </Button>
           </div>
-          <div className="relative mt-2">
-            <Search className="pointer-events-none absolute left-2 top-2 h-3.5 w-3.5 text-muted-foreground" />
-            <Input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Filter requests"
-              className="h-7 pl-7 text-xs bg-background"
-              disabled={!spec}
-            />
-          </div>
+          <SidebarFilterInput disabled={!spec} onQueryChange={setQuery} />
         </div>
 
         <div className="flex-1 min-h-0 overflow-y-auto">
