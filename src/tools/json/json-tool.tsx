@@ -79,10 +79,12 @@ export const JsonTool: React.FC = () => {
     }
   };
 
+  const deferredInputJson = React.useDeferredValue(inputJson);
+
   // Run formatting when input json or indentation changes
   useEffect(() => {
-    formatJson(inputJson, indentSize);
-  }, [inputJson, indentSize]);
+    formatJson(deferredInputJson, indentSize);
+  }, [deferredInputJson, indentSize]);
 
   // Collapsible Tree Node Renderer
   const TreeNode: React.FC<{ name?: string; value: any; isLast?: boolean }> = ({ name, value, isLast = true }) => {

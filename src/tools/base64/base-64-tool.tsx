@@ -40,9 +40,11 @@ export const Base64Tool: React.FC = () => {
     }
   };
 
+  const deferredInputText = React.useDeferredValue(inputText);
+
   useEffect(() => {
     if (activeTab === "text") {
-      if (!inputText) {
+      if (!deferredInputText) {
         setOutputText("");
         setErrorText(null);
         return;
@@ -50,16 +52,16 @@ export const Base64Tool: React.FC = () => {
       try {
         setErrorText(null);
         if (mode === "encode") {
-          setOutputText(encodeBase64(inputText));
+          setOutputText(encodeBase64(deferredInputText));
         } else {
-          setOutputText(decodeBase64(inputText));
+          setOutputText(decodeBase64(deferredInputText));
         }
       } catch (err: any) {
         setErrorText(err.message);
         setOutputText("");
       }
     }
-  }, [inputText, mode, activeTab]);
+  }, [deferredInputText, mode, activeTab]);
 
   const handleSwap = () => {
     setMode((prev) => (prev === "encode" ? "decode" : "encode"));

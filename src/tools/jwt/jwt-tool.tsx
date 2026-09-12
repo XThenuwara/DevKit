@@ -217,28 +217,33 @@ export const JwtTool: React.FC = () => {
     applySignatureStatus(algorithm, signingInput, sig, secretValue);
   };
 
+  const deferredToken = React.useDeferredValue(token);
+  const deferredHeaderText = React.useDeferredValue(headerText);
+  const deferredPayloadText = React.useDeferredValue(payloadText);
+  const deferredSecret = React.useDeferredValue(secret);
+
   useEffect(() => {
     if (lastEdited.current !== "token") return;
-    decodeToken(token);
+    decodeToken(deferredToken);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+  }, [deferredToken]);
 
   useEffect(() => {
     if (lastEdited.current === "claims") {
-      encodeClaims(headerText, payloadText, secret);
+      encodeClaims(deferredHeaderText, deferredPayloadText, deferredSecret);
       return;
     }
-    const parts = token.trim().split(".");
-    if (parts.length !== 3 || !token.trim()) return;
+    const parts = deferredToken.trim().split(".");
+    if (parts.length !== 3 || !deferredToken.trim()) return;
     try {
       const decodedHeader = JSON.parse(base64UrlDecode(parts[0])) as Record<string, unknown>;
       const algorithm = typeof decodedHeader.alg === "string" ? decodedHeader.alg : "";
-      applySignatureStatus(algorithm, `${parts[0]}.${parts[1]}`, parts[2], secret);
+      applySignatureStatus(algorithm, `${parts[0]}.${parts[1]}`, parts[2], deferredSecret);
     } catch {
       // Token is still being edited or is malformed; decode effect owns that error.
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [headerText, payloadText, secret]);
+  }, [deferredHeaderText, deferredPayloadText, deferredSecret, deferredToken]);
 
   const handleTokenChange = (value: string) => {
     lastEdited.current = "token";

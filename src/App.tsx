@@ -55,6 +55,7 @@ import { ImageExtractorTool } from "@/tools/image-extractor/image-extractor-tool
 import { NonAsciiTool } from "@/tools/non-ascii/non-ascii-tool";
 import { OpenApiTool } from "@/tools/openapi/openapi-tool";
 import { HtmlMarkdownTool } from "@/tools/html-markdown/html-markdown-tool";
+import { TextAnalyzerTool } from "@/tools/text-analyzer/text-analyzer-tool";
 
 // Radix/Shadcn dialog for Command Palette
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -136,6 +137,15 @@ const TOOLS: ToolItem[] = [
     icon: Sliders,
     component: UuidTool,
     keywords: ["uuid", "guid", "generator", "unique", "id", "random"],
+  },
+  {
+    id: "text-analyzer",
+    name: "Text Analyzer",
+    description: "Count words, characters, lines, and occurrences of strings or regexes",
+    category: "formatters",
+    icon: ScanText,
+    component: TextAnalyzerTool,
+    keywords: ["text", "count", "words", "characters", "occurrences", "analyzer", "stats", "statistics"],
   },
   {
     id: "epoch-converter",

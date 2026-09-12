@@ -32,10 +32,12 @@ export const HashTool: React.FC = () => {
   } | null>(null);
   const [isHashing, setIsHashing] = useState(false);
 
+  const deferredInputText = React.useDeferredValue(inputText);
+
   // Text hashing logic
   useEffect(() => {
     if (activeTab === "text") {
-      if (!inputText) {
+      if (!deferredInputText) {
         setMd5Hash("");
         setSha1Hash("");
         setSha256Hash("");
@@ -44,18 +46,18 @@ export const HashTool: React.FC = () => {
       }
 
       if (useHmac) {
-        setMd5Hash(CryptoJS.HmacMD5(inputText, hmacKey).toString());
-        setSha1Hash(CryptoJS.HmacSHA1(inputText, hmacKey).toString());
-        setSha256Hash(CryptoJS.HmacSHA256(inputText, hmacKey).toString());
-        setSha512Hash(CryptoJS.HmacSHA512(inputText, hmacKey).toString());
+        setMd5Hash(CryptoJS.HmacMD5(deferredInputText, hmacKey).toString());
+        setSha1Hash(CryptoJS.HmacSHA1(deferredInputText, hmacKey).toString());
+        setSha256Hash(CryptoJS.HmacSHA256(deferredInputText, hmacKey).toString());
+        setSha512Hash(CryptoJS.HmacSHA512(deferredInputText, hmacKey).toString());
       } else {
-        setMd5Hash(CryptoJS.MD5(inputText).toString());
-        setSha1Hash(CryptoJS.SHA1(inputText).toString());
-        setSha256Hash(CryptoJS.SHA256(inputText).toString());
-        setSha512Hash(CryptoJS.SHA512(inputText).toString());
+        setMd5Hash(CryptoJS.MD5(deferredInputText).toString());
+        setSha1Hash(CryptoJS.SHA1(deferredInputText).toString());
+        setSha256Hash(CryptoJS.SHA256(deferredInputText).toString());
+        setSha512Hash(CryptoJS.SHA512(deferredInputText).toString());
       }
     }
-  }, [inputText, useHmac, hmacKey, activeTab]);
+  }, [deferredInputText, useHmac, hmacKey, activeTab]);
 
   // File Hashing Logic
   const processFile = (file: File) => {

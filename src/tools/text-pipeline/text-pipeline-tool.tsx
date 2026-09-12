@@ -52,6 +52,7 @@ const STEP_TYPES = [
   // Find & Filter (amber)
   { type: "find_replace", category: "find_filter", name: "Find & Replace", desc: "Find strings or regex patterns and replace them." },
   { type: "filter_rows", category: "find_filter", name: "Filter Rows", desc: "Keep or exclude lines containing a match or regex pattern." },
+  { type: "count_occurrences", category: "find_filter", name: "Count Occurrences", desc: "Count occurrences of a specific string or regex pattern." },
 
   // Columns & Tables (emerald)
   { type: "column_extract", category: "struct_table", name: "Extract Column", desc: "Parse CSV/TSV columns by index and output them." },
@@ -308,6 +309,8 @@ export function TextPipelineTool() {
       defaultConfig = { find: "", replace: "", regex: false, caseInsensitive: false, global: true };
     } else if (stepType === "filter_rows") {
       defaultConfig = { condition: "contains", value: "" };
+    } else if (stepType === "count_occurrences") {
+      defaultConfig = { find: "", regex: false, caseInsensitive: false };
     } else if (stepType === "column_extract") {
       defaultConfig = { delim: ",", indices: "0" };
     } else if (stepType === "prepend_append") {
@@ -406,6 +409,36 @@ export function TextPipelineTool() {
           } else {
             return text.replace(find, replaceStr);
           }
+        }
+      }
+
+      case "count_occurrences": {
+        const { find, regex, caseInsensitive } = config;
+        if (!find) return "0";
+        if (regex) {
+          try {
+            const flags = "g" + (caseInsensitive ? "i" : "");
+            const regExpr = new RegExp(find, flags);
+            const matches = text.match(regExpr);
+            return (matches ? matches.length : 0).toString();
+          } catch (e: any) {
+            throw new Error(`Regex Error in count occurrences: ${e.message}`);
+          }
+        } else {
+          const target = caseInsensitive ? find.toLowerCase() : find;
+          const searchIn = caseInsensitive ? text.toLowerCase() : text;
+          let count = 0;
+          let pos = 0;
+          while (true) {
+            pos = searchIn.indexOf(target, pos);
+            if (pos >= 0) {
+              count++;
+              pos += target.length;
+            } else {
+              break;
+            }
+          }
+          return count.toString();
         }
       }
 
@@ -998,6 +1031,29 @@ export function TextPipelineTool() {
                           </div>
                         )}
 
+                        {step.type === "count_occurrences" && (
+                          <div className="flex flex-col gap-3">
+                            <div className="flex flex-col gap-1.5">
+                              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Find</span>
+                              <Input value={step.config.find} placeholder="Text or regex to count..."
+                                onChange={(e) => updateStepConfig(step.id, "find", e.target.value)}
+                                className="h-8 text-xs font-mono bg-background shadow-sm border-border/60" />
+                            </div>
+                            <div className="flex items-center gap-4 pt-1">
+                              {[
+                                { key: "regex", label: "Use Regex" },
+                                { key: "caseInsensitive", label: "Ignore Case" }
+                              ].map(({ key, label }) => (
+                                <label key={key} htmlFor={`${step.id}-${key}`} className="flex items-center gap-2 cursor-pointer text-muted-foreground hover:text-foreground transition-colors">
+                                  <Checkbox id={`${step.id}-${key}`} checked={step.config[key]}
+                                    onCheckedChange={(c) => updateStepConfig(step.id, key, !!c)} />
+                                  <span className="select-none font-medium text-xs">{label}</span>
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
                         {step.type === "markdown_table" && (
                           <div className="grid grid-cols-2 gap-3">
                             <div className="flex flex-col gap-1.5">
@@ -1122,8 +1178,17 @@ export function TextPipelineTool() {
           <div className="flex items-center justify-between px-5 py-3 border-b border-border/40 shrink-0 bg-card/30">
             <div className="flex items-center gap-2">
               <span className="text-xs font-semibold text-foreground/80">Output</span>
+              <div className="flex gap-2 text-[10px] text-muted-foreground pl-2 border-l border-border/40 items-center">
+                <span>
+                  {Array.isArray(rawDisplayedOutput) 
+                    ? `${rawDisplayedOutput.length} items • ` 
+                    : ""
+                  }
+                  {displayedOutput.length} chars • {displayedOutput.trim().split(/\s+/).filter(Boolean).length} words
+                </span>
+              </div>
               {selectedStepId && selectedStep && (
-                <div className="flex items-center gap-2 animate-in fade-in duration-150">
+                <div className="flex items-center gap-2 animate-in fade-in duration-150 pl-2 border-l border-border/40">
                   <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-[9px] font-semibold text-primary">
                     <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
                     Step {selectedStepIndex}: {selectedStepName}
