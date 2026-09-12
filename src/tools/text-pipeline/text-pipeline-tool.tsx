@@ -56,6 +56,8 @@ const STEP_TYPES = [
   // Columns & Tables (emerald)
   { type: "column_extract", category: "struct_table", name: "Extract Column", desc: "Parse CSV/TSV columns by index and output them." },
   { type: "split_join", category: "struct_table", name: "Split & Join", desc: "Split text by delimiter and join it back with another." },
+  { type: "split_array", category: "struct_table", name: "Split to Array", desc: "Split text into an array of items for separate processing." },
+  { type: "join_array", category: "struct_table", name: "Join Array", desc: "Join an array of items back into a single text string." },
   { type: "markdown_table", category: "struct_table", name: "Markdown Table", desc: "Convert CSV/TSV data to Markdown table formatting or vice-versa." },
 ];
 
@@ -157,7 +159,7 @@ const unescapeDelim = (val: string): string => {
 
 export function TextPipelineTool() {
   const [inputText, setInputText] = useState("");
-  const [outputText, setOutputText] = useState("");
+  const [outputText, setOutputText] = useState<string | string[]>("");
   const [steps, setSteps] = useState<PipelineStep[]>([
     {
       id: "init-1",
@@ -171,7 +173,7 @@ export function TextPipelineTool() {
   const [activeCategory, setActiveCategory] = useState("all");
   const [showAvailableSteps, setShowAvailableSteps] = useState(true);
   const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
-  const [stepOutputs, setStepOutputs] = useState<Record<string, string>>({});
+  const [stepOutputs, setStepOutputs] = useState<Record<string, string | string[]>>({});
   const [error, setError] = useState<string | null>(null);
 
   const loadTemplate = (key: string) => {
@@ -189,7 +191,7 @@ export function TextPipelineTool() {
     setIsTemplateModalOpen(false); // Close modal on load
   };
 
-  const getStepInput = (stepId: string): string => {
+  const getStepInput = (stepId: string): string | string[] => {
     const stepIndex = steps.findIndex((s) => s.id === stepId);
     if (stepIndex <= 0) return inputText;
     // Find the last active step before this one
@@ -204,7 +206,8 @@ export function TextPipelineTool() {
   const getStepHeaders = (step: PipelineStep) => {
     const delimVal = unescapeDelim(step.config.delim || ",");
     const stepInput = getStepInput(step.id);
-    const firstLine = stepInput.split("\n").find((l) => l.trim() !== "");
+    const textStr = Array.isArray(stepInput) ? stepInput[0] || "" : stepInput;
+    const firstLine = textStr.split("\n").find((l: string) => l.trim() !== "");
     if (!firstLine) return [];
 
     const cells = firstLine.split(delimVal);
@@ -311,6 +314,10 @@ export function TextPipelineTool() {
       defaultConfig = { prepend: "", append: "", perLine: true };
     } else if (stepType === "case_conv") {
       defaultConfig = { mode: "upper", perLine: true };
+    } else if (stepType === "split_array") {
+      defaultConfig = { delim: "\\n" };
+    } else if (stepType === "join_array") {
+      defaultConfig = { delim: "\\n" };
     } else if (stepType === "markdown_table") {
       defaultConfig = { mode: "csv_to_md", delim: "," };
     }
@@ -357,7 +364,7 @@ export function TextPipelineTool() {
   };
 
   // Pipeline Engine Processor
-  const executeStep = (text: string, step: PipelineStep): string => {
+  const executeStringStep = (text: string, step: PipelineStep): string => {
     const { type, config } = step;
 
     switch (type) {
@@ -543,11 +550,35 @@ export function TextPipelineTool() {
     }
   };
 
+  const executeStep = (input: string | string[], step: PipelineStep): string | string[] => {
+    if (step.type === "split_array") {
+      const splitVal = unescapeDelim(step.config.delim || "");
+      if (!splitVal) return input;
+      if (Array.isArray(input)) {
+        return input.flatMap((item) => item.split(splitVal));
+      }
+      return input.split(splitVal);
+    }
+
+    if (step.type === "join_array") {
+      const joinVal = unescapeDelim(step.config.delim || "");
+      if (Array.isArray(input)) {
+        return input.join(joinVal);
+      }
+      return input;
+    }
+
+    if (Array.isArray(input)) {
+      return input.map((item) => executeStringStep(item, step));
+    }
+    return executeStringStep(input, step);
+  };
+
   useEffect(() => {
     try {
       setError(null);
-      let tempText = inputText;
-      const newOutputs: Record<string, string> = {};
+      let tempText: string | string[] = inputText;
+      const newOutputs: Record<string, string | string[]> = {};
       for (const step of steps) {
         if (step.isActive) {
           tempText = executeStep(tempText, step);
@@ -574,9 +605,13 @@ export function TextPipelineTool() {
   const selectedStepIndex = selectedStep ? steps.indexOf(selectedStep) + 1 : -1;
   const selectedStepName = selectedStep ? STEP_TYPES.find((st) => st.type === selectedStep.type)?.name : "";
   
-  const displayedOutput = (selectedStepId && stepOutputs[selectedStepId] !== undefined)
+  const rawDisplayedOutput = (selectedStepId && stepOutputs[selectedStepId] !== undefined)
     ? stepOutputs[selectedStepId]
     : outputText;
+
+  const displayedOutput = Array.isArray(rawDisplayedOutput) 
+    ? JSON.stringify(rawDisplayedOutput, null, 2)
+    : rawDisplayedOutput;
 
   const suggestedTemplates = getSuggestedTemplates(inputText);
 
@@ -942,6 +977,24 @@ export function TextPipelineTool() {
                                 <span className="select-none font-medium text-xs">Per line</span>
                               </label>
                             </div>
+                          </div>
+                        )}
+
+                        {step.type === "split_array" && (
+                          <div className="flex flex-col gap-1.5 w-1/2">
+                            <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Delimiter (e.g. \n or ,)</span>
+                            <Input value={step.config.delim} placeholder="\n"
+                              onChange={(e) => updateStepConfig(step.id, "delim", e.target.value)}
+                              className="h-8 text-xs font-mono bg-background shadow-sm border-border/60" />
+                          </div>
+                        )}
+
+                        {step.type === "join_array" && (
+                          <div className="flex flex-col gap-1.5 w-1/2">
+                            <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Join With</span>
+                            <Input value={step.config.delim} placeholder="\n"
+                              onChange={(e) => updateStepConfig(step.id, "delim", e.target.value)}
+                              className="h-8 text-xs font-mono bg-background shadow-sm border-border/60" />
                           </div>
                         )}
 
