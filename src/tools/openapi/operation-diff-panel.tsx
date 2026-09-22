@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/shared/copy-button";
 import { CodeDiffEditor, CodeEditor } from "./code-editor";
 import { mergeOperationView, serializeOperationView } from "./openapi-model";
+import { normalizeDiffText } from "./diff-utils";
 import type { HttpMethod, OpenAPIDoc, SpecFormat } from "./openapi-types";
 
 /**
@@ -23,10 +24,13 @@ export const OperationDiffPanel: React.FC<{
   onSpecChange: (spec: OpenAPIDoc) => void;
   onError: (message: string | null) => void;
 }> = ({ spec, path, method, format, onSpecChange, onError }) => {
-  const current = useMemo(
+  const baseCurrent = useMemo(
     () => serializeOperationView(spec, path, method, format),
     [spec, path, method, format],
   );
+  
+  const [formattedCurrent, setFormattedCurrent] = useState<string | null>(null);
+  const current = formattedCurrent !== null ? formattedCurrent : baseCurrent;
   const [pasted, setPasted] = useState("");
   const [applyFeedback, setApplyFeedback] = useState<string | null>(null);
 
@@ -93,6 +97,19 @@ export const OperationDiffPanel: React.FC<{
             <label htmlFor="import-diff-snippet" className="cursor-pointer">
               Import Snippet
             </label>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 px-2 text-[11px]"
+            type="button"
+            disabled={!hasDiff}
+            onClick={() => {
+              setFormattedCurrent(normalizeDiffText(current, format));
+              setPasted(normalizeDiffText(pasted, format));
+            }}
+          >
+            Sort Keys
           </Button>
           <Button
             variant="ghost"

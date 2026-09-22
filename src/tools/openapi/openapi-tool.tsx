@@ -39,6 +39,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { BodySchemaPanel } from "./body-schema-panel";
 import { CodeDiffEditor, CodeEditor } from "./code-editor";
+import { normalizeDiffText } from "./diff-utils";
 import { EndpointSidebar } from "./endpoint-sidebar";
 import { ExportDialog } from "./export-dialog";
 import { OperationDiffPanel } from "./operation-diff-panel";
@@ -637,6 +638,18 @@ const SpecOverview: React.FC<{
               </Button>
               {diffPasted.trim() ? (
                 <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-6 px-2.5 text-[11px] font-semibold"
+                    type="button"
+                    onClick={() => {
+                      setDraftSource(normalizeDiffText(draftSource, format));
+                      setDiffPasted(normalizeDiffText(diffPasted, format));
+                    }}
+                  >
+                    Sort Keys
+                  </Button>
                   <Button
                     variant="ghost"
                     size="sm"

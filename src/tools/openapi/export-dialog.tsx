@@ -24,6 +24,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CodeDiffEditor, CodeEditor } from "./code-editor";
 import { parseSpec, serializeSpec } from "./openapi-model";
+import { normalizeDiffText } from "./diff-utils";
 import type { OpenAPIDoc, SpecFormat } from "./openapi-types";
 
 export interface DiffHunk {
@@ -149,13 +150,23 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
 
   const exported = useMemo(() => serializeSpec(spec, format), [spec, format]);
   const original = useMemo(() => serializeSpec(baselineSpec, format), [baselineSpec, format]);
-  const hunks = useMemo(() => computeDiffHunks(original, exported), [original, exported]);
+
+  const [formattedOriginal, setFormattedOriginal] = useState<string | null>(null);
+  const [formattedExported, setFormattedExported] = useState<string | null>(null);
+
+  const displayOriginal = formattedOriginal ?? original;
+  const displayExported = rightDraft ?? formattedExported ?? exported;
+
+  const hunks = useMemo(() => computeDiffHunks(displayOriginal, displayExported), [displayOriginal, displayExported]);
 
   // When spec changes externally (e.g. rollback), sync right draft to null (canonical)
+  // Also reset formatting.
   useEffect(() => {
     setRightDraft(null);
     setApplyError(null);
-  }, [exported]);
+    setFormattedOriginal(null);
+    setFormattedExported(null);
+  }, [exported, original]);
 
   useEffect(() => {
     if (activeHunkIndex >= hunks.length && hunks.length > 0) {
@@ -354,6 +365,22 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
               </SelectContent>
             </Select>
 
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 px-2 text-[11px]"
+              type="button"
+              onClick={() => {
+                setFormattedOriginal(normalizeDiffText(original, format));
+                setFormattedExported(normalizeDiffText(exported, format));
+                if (rightDraft) {
+                  setRightDraft(normalizeDiffText(rightDraft, format));
+                }
+              }}
+            >
+              Sort Keys
+            </Button>
+
             <CopyButton value={rightDraft ?? exported} className="h-7 w-7" />
           </div>
         </div>
@@ -394,7 +421,7 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
                     </div>
                     <div className="flex-1 min-h-0">
                       <CodeEditor
-                        value={original}
+                        value={displayOriginal}
                         language={format}
                         readOnly
                         height="100%"
@@ -502,8 +529,8 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
                 <span className="text-primary">Current export — editable · edit the right side to apply changes</span>
               </div>
               <CodeDiffEditor
-                original={original}
-                modified={rightDraft ?? exported}
+                original={displayOriginal}
+                modified={displayExported}
                 language={format}
                 className="flex-1 min-h-0"
                 height="100%"
