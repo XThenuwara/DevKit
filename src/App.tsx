@@ -56,6 +56,7 @@ import { NonAsciiTool } from "@/tools/non-ascii/non-ascii-tool";
 import { OpenApiTool } from "@/tools/openapi/openapi-tool";
 import { HtmlMarkdownTool } from "@/tools/html-markdown/html-markdown-tool";
 import { TextAnalyzerTool } from "@/tools/text-analyzer/text-analyzer-tool";
+import { DiffTool } from "@/tools/diff/diff-tool";
 
 // Radix/Shadcn dialog for Command Palette
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -155,6 +156,15 @@ const TOOLS: ToolItem[] = [
     icon: Calendar,
     component: EpochTool,
     keywords: ["epoch", "unix", "timestamp", "time", "date", "utc", "local"],
+  },
+  {
+    id: "diff-checker",
+    name: "Diff Checker",
+    description: "Compare two snippets of text or code to see their differences",
+    category: "formatters",
+    icon: FileCode,
+    component: DiffTool,
+    keywords: ["diff", "compare", "differences", "code", "text", "git"],
   },
   {
     id: "julian-converter",

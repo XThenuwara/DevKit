@@ -164,6 +164,17 @@ export const ParametersTable: React.FC<ParametersTableProps> = ({
     [rows],
   );
 
+  const groupedRows = useMemo(() => {
+    const groups: Record<ParameterObject["in"], ParamRow[]> = {
+      path: [],
+      query: [],
+      header: [],
+      cookie: [],
+    };
+    for (const row of rows) groups[row.param.in].push(row);
+    return groups;
+  }, [rows]);
+
   const patch = (row: ParamRow, next: ParameterObject) => {
     if (row.source === "path") {
       onPathChange(pathParams.map((item, i) => (i === row.index ? next : item)));
@@ -192,224 +203,222 @@ export const ParametersTable: React.FC<ParametersTableProps> = ({
     setAnchor(null);
   };
 
-  if (rows.length === 0) {
-    return (
-      <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3">
-        <p className="text-xs text-muted-foreground">No parameters yet. Add a field or reuse one from this spec.</p>
-        <div className="flex flex-wrap items-center justify-center gap-1.5">
-          <Button variant="outline" size="sm" className="h-7 text-xs" type="button" onClick={() => onAdd("path")}>
-            <Plus className="h-3 w-3 mr-1" />
-            Path
-          </Button>
-          <Button variant="outline" size="sm" className="h-7 text-xs" type="button" onClick={() => onAdd("query")}>
-            <Plus className="h-3 w-3 mr-1" />
-            Query
-          </Button>
-          <Button variant="outline" size="sm" className="h-7 text-xs" type="button" onClick={() => onAdd("header")}>
-            <Plus className="h-3 w-3 mr-1" />
-            Header
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      <div className="grid min-w-[720px] shrink-0 grid-cols-[1fr_80px_88px_88px_44px_1fr_72px] gap-0 border-b border-border/50 px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-        <span>Name</span>
-        <span>In</span>
-        <span>Type</span>
-        <span>Format</span>
-        <span>Req</span>
-        <span>Description</span>
-        <span>Example</span>
-      </div>
-      <div className="min-h-0 flex-1 overflow-auto">
-        {rows.map((row, visualIndex) => {
-          const { param } = row;
-          const schema = param.schema ?? { type: "string" };
-          const type = schemaType(schema);
-          const formats = PARAM_FORMATS[type] ?? [""];
-          const rowKey = `${row.source}-${row.index}`;
-          const matches = filterFieldCatalog(catalog, param.name, {
-            kinds: ["parameter", "property", "schema"],
-            excludeNames: new Set(
-              [...existingNames].filter((name) => name !== param.name.toLowerCase()),
-            ),
-          });
+      <div className="min-h-0 flex-1 overflow-auto pb-6">
+        {([
+          { key: "path", label: "Path Parameters" },
+          { key: "query", label: "Query Parameters" },
+          { key: "header", label: "Headers" },
+          { key: "cookie", label: "Cookies" },
+        ] as const).map(({ key, label }) => {
+          const sectionRows = groupedRows[key];
+          if (sectionRows.length === 0 && key === "cookie") return null;
+
           return (
-            <ContextMenu key={rowKey}>
-              <ContextMenuTrigger asChild>
-                <div
-                  className={`grid min-w-[720px] grid-cols-[1fr_80px_88px_88px_44px_1fr_72px] items-center gap-1 border-b border-border/40 px-2 py-1 ${
-                    visualIndex % 2 === 0 ? "bg-transparent" : "bg-background/50"
-                  }`}
-                >
-              <div className="relative flex items-center">
-                <DraftInput
-                  value={param.name}
-                  onCommit={(v) => {
-                    patch(row, { ...param, name: v });
-                    setActiveName(null);
-                    setAnchor(null);
-                  }}
-                  className={`${CELL} text-xs font-mono`}
-                  placeholder="name"
-                  onFocusCb={(e) => {
-                    setActiveName(rowKey);
-                    setAnchor(e.currentTarget);
-                  }}
-                  onBlurCb={() =>
-                    setTimeout(() => {
-                      setActiveName((current) => (current === rowKey ? null : current));
-                      setAnchor(null);
-                    }, 150)
-                  }
-                  onChangeCb={() => {
-                    setActiveName(rowKey);
-                  }}
-                />
-                {param.required ? <span className="absolute right-2.5 text-red-500 font-bold text-xs pointer-events-none">*</span> : null}
-                <SuggestMenu
-                  open={activeName === rowKey}
-                  anchor={activeName === rowKey ? anchor : null}
-                  items={matches.map((item) => ({
-                    id: item.key,
-                    title: item.name,
-                    badge: item.kind === "parameter" ? item.in ?? "param" : item.kind,
-                    subtitle: `${item.type ?? "string"}${item.usedIn[0] ? ` · ${item.usedIn[0]}` : ""}${item.description ? ` · ${item.description}` : ""}`,
-                  }))}
-                  onSelect={(id) => {
-                    const item = catalog.find((entry) => entry.key === id);
-                    if (item) applySuggestion(row, item);
-                  }}
-                />
+            <div key={key} className="mb-4 last:mb-0">
+              <div className="flex items-center justify-between bg-muted/30 px-3 py-1.5 border-y border-border/50 first:border-t-0">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">{label}</span>
+                <Button variant="ghost" size="icon-xs" className="h-5 w-5" onClick={() => onAdd(key)}>
+                  <Plus className="h-3 w-3" />
+                </Button>
               </div>
-              <Select
-                value={param.in}
-                onValueChange={(value) => {
-                  const nextIn = value as ParameterObject["in"];
-                  if (nextIn === "path" && row.source === "operation") {
-                    const moved = { ...param, in: nextIn, required: true };
-                    onOpChange(opParams.filter((_, i) => i !== row.index));
-                    onPathChange([...pathParams, moved]);
-                    return;
-                  }
-                  if (nextIn !== "path" && row.source === "path") {
-                    const moved = { ...param, in: nextIn, required: false };
-                    onPathChange(pathParams.filter((_, i) => i !== row.index));
-                    onOpChange([...opParams, moved]);
-                    return;
-                  }
-                  patch(row, {
-                    ...param,
-                    in: nextIn,
-                    required: nextIn === "path" ? true : param.required,
-                  });
-                }}
-              >
-                <SelectTrigger className={`h-7 text-[11px] font-semibold border-transparent ${IN_TONE[param.in]}`}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {(["path", "query", "header", "cookie"] as const).map((item) => (
-                    <SelectItem key={item} value={item}>
-                      {item}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select
-                value={type}
-                onValueChange={(value) =>
-                  patch(row, {
-                    ...param,
-                    schema: emptySchemaForType(value),
-                  })
-                }
-              >
-                <SelectTrigger className={`${CELL} text-[11px]`}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {PARAM_TYPES.map((item) => (
-                    <SelectItem key={item} value={item}>
-                      {item}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select
-                value={schema.format ?? ""}
-                onValueChange={(value) =>
-                  patch(row, {
-                    ...param,
-                    schema: { ...schema, format: value || undefined },
-                  })
-                }
-                disabled={!PARAM_FORMATS[type]}
-              >
-                <SelectTrigger className={`${CELL} text-[11px]`}>
-                  <SelectValue placeholder="—" />
-                </SelectTrigger>
-                <SelectContent>
-                  {formats.map((fmt) => (
-                    <SelectItem key={fmt || "none"} value={fmt}>
-                      {fmt || "—"}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <label className="flex items-center justify-center">
-                <Checkbox
-                  checked={Boolean(param.required) || param.in === "path"}
-                  onCheckedChange={(value) => patch(row, { ...param, required: value === true })}
-                  disabled={param.in === "path"}
-                />
-              </label>
-              <DraftInput
-                value={param.description ?? ""}
-                onCommit={(v) => patch(row, { ...param, description: v || undefined })}
-                className={`${CELL} text-xs`}
-                placeholder="Description"
-              />
-              <DraftInput
-                value={schema.example !== undefined ? String(schema.example) : ""}
-                onCommit={(raw) => {
-                  let example: unknown = raw;
-                  if (type === "integer") example = raw ? Number.parseInt(raw, 10) : undefined;
-                  else if (type === "number") example = raw ? Number.parseFloat(raw) : undefined;
-                  else if (type === "boolean") example = raw === "true";
-                  patch(row, {
-                    ...param,
-                    schema: { ...schema, example: raw ? example : undefined },
-                  });
-                }}
-                className={`${CELL} text-xs font-mono`}
-                placeholder="ex"
-              />
+              <div className="grid min-w-[720px] shrink-0 grid-cols-[1fr_80px_88px_88px_44px_1fr_72px] gap-0 border-b border-border/50 px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-muted-foreground/70 bg-background sticky top-0 z-10">
+                <span>Name</span>
+                <span>In</span>
+                <span>Type</span>
+                <span>Format</span>
+                <span>Req</span>
+                <span>Description</span>
+                <span>Example</span>
+              </div>
+              {sectionRows.length === 0 ? (
+                <div className="px-3 py-4 text-xs text-muted-foreground italic flex items-center justify-center border-b border-border/20">
+                  No {label.toLowerCase()}
                 </div>
-              </ContextMenuTrigger>
-              <ContextMenuContent className="min-w-40">
-                <ContextMenuItem disabled={param.in === "path"} onClick={() => patch(row, { ...param, required: !param.required })}>
-                  {param.required || param.in === "path" ? "Mark optional" : "Mark required"}
-                </ContextMenuItem>
-                <ContextMenuSeparator />
-                <ContextMenuItem variant="destructive" onClick={() => remove(row)}>
-                  <Trash2 className="h-3.5 w-3.5" />
-                  Delete parameter
-                </ContextMenuItem>
-              </ContextMenuContent>
-            </ContextMenu>
+              ) : (
+                sectionRows.map((row, visualIndex) => {
+                  const { param } = row;
+                  const schema = param.schema ?? { type: "string" };
+                  const type = schemaType(schema);
+                  const formats = PARAM_FORMATS[type] ?? [""];
+                  const rowKey = `${row.source}-${row.index}`;
+                  const matches = filterFieldCatalog(catalog, param.name, {
+                    kinds: ["parameter", "property", "schema"],
+                    excludeNames: new Set(
+                      [...existingNames].filter((name) => name !== param.name.toLowerCase()),
+                    ),
+                  });
+                  return (
+                    <ContextMenu key={rowKey}>
+                      <ContextMenuTrigger asChild>
+                        <div
+                          className={`grid min-w-[720px] grid-cols-[1fr_80px_88px_88px_44px_1fr_72px] items-center gap-1 border-b border-border/40 px-2 py-1 ${
+                            visualIndex % 2 === 0 ? "bg-transparent" : "bg-background/50"
+                          }`}
+                        >
+                          <div className="relative flex items-center">
+                            <DraftInput
+                              value={param.name}
+                              onCommit={(v) => {
+                                patch(row, { ...param, name: v });
+                                setActiveName(null);
+                                setAnchor(null);
+                              }}
+                              className={`${CELL} text-xs font-mono`}
+                              placeholder="name"
+                              onFocusCb={(e) => {
+                                setActiveName(rowKey);
+                                setAnchor(e.currentTarget);
+                              }}
+                              onBlurCb={() =>
+                                setTimeout(() => {
+                                  setActiveName((current) => (current === rowKey ? null : current));
+                                  setAnchor(null);
+                                }, 150)
+                              }
+                              onChangeCb={() => {
+                                setActiveName(rowKey);
+                              }}
+                            />
+                            {param.required ? <span className="absolute right-2.5 text-red-500 font-bold text-xs pointer-events-none">*</span> : null}
+                            <SuggestMenu
+                              open={activeName === rowKey}
+                              anchor={activeName === rowKey ? anchor : null}
+                              items={matches.map((item) => ({
+                                id: item.key,
+                                title: item.name,
+                                badge: item.kind === "parameter" ? item.in ?? "param" : item.kind,
+                                subtitle: `${item.type ?? "string"}${item.usedIn[0] ? ` · ${item.usedIn[0]}` : ""}${item.description ? ` · ${item.description}` : ""}`,
+                              }))}
+                              onSelect={(id) => {
+                                const item = catalog.find((entry) => entry.key === id);
+                                if (item) applySuggestion(row, item);
+                              }}
+                            />
+                          </div>
+                          <Select
+                            value={param.in}
+                            onValueChange={(value) => {
+                              const nextIn = value as ParameterObject["in"];
+                              if (nextIn === "path" && row.source === "operation") {
+                                const moved = { ...param, in: nextIn, required: true };
+                                onOpChange(opParams.filter((_, i) => i !== row.index));
+                                onPathChange([...pathParams, moved]);
+                                return;
+                              }
+                              if (nextIn !== "path" && row.source === "path") {
+                                const moved = { ...param, in: nextIn, required: false };
+                                onPathChange(pathParams.filter((_, i) => i !== row.index));
+                                onOpChange([...opParams, moved]);
+                                return;
+                              }
+                              patch(row, {
+                                ...param,
+                                in: nextIn,
+                                required: nextIn === "path" ? true : param.required,
+                              });
+                            }}
+                          >
+                            <SelectTrigger className={`h-7 text-[11px] font-semibold border-transparent ${IN_TONE[param.in]}`}>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {(["path", "query", "header", "cookie"] as const).map((item) => (
+                                <SelectItem key={item} value={item}>
+                                  {item}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Select
+                            value={type}
+                            onValueChange={(value) =>
+                              patch(row, {
+                                ...param,
+                                schema: emptySchemaForType(value),
+                              })
+                            }
+                          >
+                            <SelectTrigger className={`${CELL} text-[11px]`}>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {PARAM_TYPES.map((item) => (
+                                <SelectItem key={item} value={item}>
+                                  {item}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Select
+                            value={schema.format ?? ""}
+                            onValueChange={(value) =>
+                              patch(row, {
+                                ...param,
+                                schema: { ...schema, format: value || undefined },
+                              })
+                            }
+                            disabled={!PARAM_FORMATS[type]}
+                          >
+                            <SelectTrigger className={`${CELL} text-[11px]`}>
+                              <SelectValue placeholder="—" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {formats.map((fmt) => (
+                                <SelectItem key={fmt || "none"} value={fmt}>
+                                  {fmt || "—"}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <label className="flex items-center justify-center">
+                            <Checkbox
+                              checked={Boolean(param.required) || param.in === "path"}
+                              onCheckedChange={(value) => patch(row, { ...param, required: value === true })}
+                              disabled={param.in === "path"}
+                            />
+                          </label>
+                          <DraftInput
+                            value={param.description ?? ""}
+                            onCommit={(v) => patch(row, { ...param, description: v || undefined })}
+                            className={`${CELL} text-xs`}
+                            placeholder="Description"
+                          />
+                          <DraftInput
+                            value={schema.example !== undefined ? String(schema.example) : ""}
+                            onCommit={(raw) => {
+                              let example: unknown = raw;
+                              if (type === "integer") example = raw ? Number.parseInt(raw, 10) : undefined;
+                              else if (type === "number") example = raw ? Number.parseFloat(raw) : undefined;
+                              else if (type === "boolean") example = raw === "true";
+                              patch(row, {
+                                ...param,
+                                schema: { ...schema, example: raw ? example : undefined },
+                              });
+                            }}
+                            className={`${CELL} text-xs font-mono`}
+                            placeholder="ex"
+                          />
+                        </div>
+                      </ContextMenuTrigger>
+                      <ContextMenuContent className="min-w-40">
+                        <ContextMenuItem disabled={param.in === "path"} onClick={() => patch(row, { ...param, required: !param.required })}>
+                          {param.required || param.in === "path" ? "Mark optional" : "Mark required"}
+                        </ContextMenuItem>
+                        <ContextMenuSeparator />
+                        <ContextMenuItem variant="destructive" onClick={() => remove(row)}>
+                          <Trash2 className="h-3.5 w-3.5" />
+                          Delete parameter
+                        </ContextMenuItem>
+                      </ContextMenuContent>
+                    </ContextMenu>
+                  );
+                })
+              )}
+            </div>
           );
         })}
-      </div>
-      <div className="flex shrink-0 items-center border-t border-border/50 px-2 py-1.5">
-        <Button variant="ghost" size="sm" className="h-7 text-xs" type="button" onClick={() => onAdd("query")}>
-          <Plus className="h-3 w-3 mr-1" />
-          Add field
-        </Button>
       </div>
     </div>
   );
