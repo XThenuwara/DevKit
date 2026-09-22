@@ -120,6 +120,7 @@ type ExportDialogProps = {
   baselineSpec: OpenAPIDoc;
   format: SpecFormat;
   fileName: string;
+  onFileNameChange: (name: string) => void;
   onFormatChange: (format: SpecFormat) => void;
   onSpecChange: (spec: OpenAPIDoc) => void;
 };
@@ -131,6 +132,7 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
   baselineSpec,
   format,
   fileName,
+  onFileNameChange,
   onFormatChange,
   onSpecChange,
 }) => {
@@ -576,23 +578,33 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
           )}
         </div>
 
-        <DialogFooter className="shrink-0 border-t border-border/50 px-4 py-3">
-          <Button variant="outline" size="sm" type="button" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          {hasDraft ? (
-            <button
-              type="button"
-              className="flex items-center gap-1 rounded-md bg-emerald-600 px-3 py-1.5 text-[12px] font-semibold text-white hover:bg-emerald-700 transition-colors shadow-sm"
-              onClick={() => parseAndApply(rightDraft!)}
-            >
-              <Check className="h-3.5 w-3.5" /> Apply &amp; Save
-            </button>
-          ) : null}
-          <Button size="sm" type="button" onClick={download}>
-            <Download className="h-3.5 w-3.5 mr-1" />
-            Download ({fileName})
-          </Button>
+        <DialogFooter className="shrink-0 border-t border-border/50 px-4 py-3 flex items-center justify-between sm:justify-between w-full">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">File:</span>
+            <input 
+              value={fileName}
+              onChange={(e) => onFileNameChange(e.target.value)}
+              className="text-xs font-mono bg-transparent border-b border-border/60 hover:border-primary focus:border-primary focus:outline-none transition-colors w-[180px] py-0.5"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" type="button" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            {hasDraft ? (
+              <button
+                type="button"
+                className="flex items-center gap-1 rounded-md bg-emerald-600 px-3 py-1.5 text-[12px] font-semibold text-white hover:bg-emerald-700 transition-colors shadow-sm"
+                onClick={() => parseAndApply(rightDraft!)}
+              >
+                <Check className="h-3.5 w-3.5" /> Apply &amp; Save
+              </button>
+            ) : null}
+            <Button size="sm" type="button" onClick={download}>
+              <Download className="h-3.5 w-3.5 mr-1" />
+              Download
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>

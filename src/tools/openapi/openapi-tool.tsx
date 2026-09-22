@@ -1005,10 +1005,8 @@ export const OpenApiTool: React.FC = () => {
   }, [fieldCatalog, pathCatalog, newPath]);
 
   const applySpec = (next: OpenAPIDoc, nextFormat = format, resetBaseline = false) => {
-    const serialized = serializeSpec(next, nextFormat);
     setSpec(next);
     setFormat(nextFormat);
-    setSourceText(serialized);
     setError(null);
     setSelected((prevSelected) => {
       if (!prevSelected) return null;
@@ -1017,21 +1015,32 @@ export const OpenApiTool: React.FC = () => {
       return stillExists ? prevSelected : (ops[0] ? { path: ops[0].path, method: ops[0].method } : null);
     });
     if (resetBaseline) setBaselineSpec(cloneSpec(next));
-    // Auto-save to recents (debounced via the stable specIdRef)
-    if (specIdRef.current) {
-      const currentFileName = fileName; // captured at call time
-      const entry: RecentEntry = {
-        id: specIdRef.current,
-        title: next.info.title || "Untitled API",
-        version: next.info.version || "1.0.0",
-        format: nextFormat,
-        fileName: currentFileName,
-        savedAt: new Date().toISOString(),
-        sourceText: serialized,
-      };
-      saveToRecents(entry);
-      refreshRecents();
-    }
+    
+    // Defer the computationally heavy serialization and storage so the UI can update immediately
+    setTimeout(() => {
+      try {
+        const serialized = serializeSpec(next, nextFormat);
+        setSourceText(serialized);
+        
+        // Auto-save to recents (debounced via the stable specIdRef)
+        if (specIdRef.current) {
+          const currentFileName = fileName; // captured at call time
+          const entry: RecentEntry = {
+            id: specIdRef.current,
+            title: next.info.title || "Untitled API",
+            version: next.info.version || "1.0.0",
+            format: nextFormat,
+            fileName: currentFileName,
+            savedAt: new Date().toISOString(),
+            sourceText: serialized,
+          };
+          saveToRecents(entry);
+          refreshRecents();
+        }
+      } catch (e) {
+        console.error("Failed background serialization", e);
+      }
+    }, 50);
   };
 
   const handleSelect = (nextSelection: { path: string; method: HttpMethod } | null | "overview") => {
@@ -1551,6 +1560,7 @@ export const OpenApiTool: React.FC = () => {
           baselineSpec={baselineSpec}
           format={format}
           fileName={fileName}
+          onFileNameChange={setFileName}
           onFormatChange={(next) => {
             setFormat(next);
             setSourceText(serializeSpec(spec, next));

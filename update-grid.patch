@@ -1,0 +1,72 @@
+--- src/tools/openapi/parameters-panel.tsx
++++ src/tools/openapi/parameters-panel.tsx
+@@ -223,12 +223,13 @@
+                   <Plus className="h-3 w-3" />
+                 </Button>
+               </div>
+-              <div className="grid min-w-[720px] shrink-0 grid-cols-[1fr_80px_88px_88px_44px_1fr_72px] gap-0 border-b border-border/50 px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-muted-foreground/70 bg-background sticky top-0 z-10">
++              <div className="grid min-w-[720px] lg:min-w-[900px] shrink-0 grid-cols-[1.5fr_72px_88px_88px_44px_1.5fr_1.5fr_72px] gap-0 border-b border-border/50 px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-muted-foreground/70 bg-background sticky top-0 z-10">
+                 <span>Name</span>
+                 <span>In</span>
+                 <span>Type</span>
+                 <span>Format</span>
+                 <span>Req</span>
++                <span>Enum</span>
+                 <span>Description</span>
+                 <span>Example</span>
+               </div>
+@@ -253,15 +254,15 @@
+                     <ContextMenu key={rowKey}>
+                       <ContextMenuTrigger asChild>
+                         <div
+-                          className={`grid min-w-[720px] grid-cols-[1fr_80px_88px_88px_44px_1fr_72px] items-center gap-1 border-b border-border/40 px-2 py-1 ${
++                          className={`grid min-w-[720px] lg:min-w-[900px] grid-cols-[1.5fr_72px_88px_88px_44px_1.5fr_1.5fr_72px] items-center gap-1 border-b border-border/40 px-2 py-1 ${
+                             visualIndex % 2 === 0 ? "bg-transparent" : "bg-background/50"
+                           }`}
+                         >
+-                          <div className="relative flex items-center">
++                          <div className="relative flex items-center w-full min-w-0">
+                             <DraftInput
+                               value={param.name}
+                               onCommit={(v) => {
+                                 patch(row, { ...param, name: v });
+                                 setActiveName(null);
+                                 setAnchor(null);
+                               }}
+-                              className={`${CELL} text-xs font-mono`}
++                              className={`${CELL} text-xs font-mono w-full min-w-0`}
+                               placeholder="name"
+                               onFocusCb={(e) => {
+@@ -379,10 +380,22 @@
+                               disabled={param.in === "path"}
+                             />
+                           </label>
++                          <DraftInput
++                            value={schema.enum?.join(", ") ?? ""}
++                            onCommit={(raw) => {
++                              const enumArr = raw ? raw.split(",").map(s => s.trim()).filter(Boolean) : undefined;
++                              patch(row, {
++                                ...param,
++                                schema: { ...schema, enum: enumArr && enumArr.length > 0 ? enumArr : undefined }
++                              });
++                            }}
++                            className={`${CELL} text-xs font-mono w-full min-w-0`}
++                            placeholder="val1, val2..."
++                          />
+                           <DraftInput
+                             value={param.description ?? ""}
+                             onCommit={(v) => patch(row, { ...param, description: v || undefined })}
+-                            className={`${CELL} text-xs`}
++                            className={`${CELL} text-xs w-full min-w-0`}
+                             placeholder="Description"
+                           />
+                           <DraftInput
+@@ -397,7 +410,7 @@
+                                 schema: { ...schema, example: raw ? example : undefined },
+                               });
+                             }}
+-                            className={`${CELL} text-xs font-mono`}
++                            className={`${CELL} text-xs font-mono w-full min-w-0`}
+                             placeholder="ex"
+                           />
+                         </div>
