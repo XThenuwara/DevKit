@@ -1,0 +1,80 @@
+--- src/tools/openapi/parameters-panel.tsx
++++ src/tools/openapi/parameters-panel.tsx
+@@ -298,18 +298,20 @@
+                           <Select
+                             value={param.in}
+                             onValueChange={(value) => {
+-                              const nextIn = value as ParameterObject["in"];
+-                              if (nextIn === "path" && row.source === "operation") {
+-                                const moved = { ...param, in: nextIn, required: true };
+-                                onOpChange(opParams.filter((_, i) => i !== row.index));
+-                                onPathChange([...pathParams, moved]);
+-                                return;
+-                              }
+-                              if (nextIn !== "path" && row.source === "path") {
+-                                const moved = { ...param, in: nextIn, required: false };
+-                                onPathChange(pathParams.filter((_, i) => i !== row.index));
+-                                onOpChange([...opParams, moved]);
+-                                return;
+-                              }
+-                              patch(row, {
+-                                ...param,
+-                                in: nextIn,
+-                                required: nextIn === "path" ? true : param.required,
+-                              });
++                              setTimeout(() => {
++                                const nextIn = value as ParameterObject["in"];
++                                if (nextIn === "path" && row.source === "operation") {
++                                  const moved = { ...param, in: nextIn, required: true };
++                                  onOpChange(opParams.filter((_, i) => i !== row.index));
++                                  onPathChange([...pathParams, moved]);
++                                  return;
++                                }
++                                if (nextIn !== "path" && row.source === "path") {
++                                  const moved = { ...param, in: nextIn, required: false };
++                                  onPathChange(pathParams.filter((_, i) => i !== row.index));
++                                  onOpChange([...opParams, moved]);
++                                  return;
++                                }
++                                patch(row, {
++                                  ...param,
++                                  in: nextIn,
++                                  required: nextIn === "path" ? true : param.required,
++                                });
++                              }, 10);
+                             }}
+                           >
+@@ -327,10 +329,12 @@
+                           <Select
+                             value={type}
+                             onValueChange={(value) =>
+-                              patch(row, {
+-                                ...param,
+-                                schema: emptySchemaForType(value),
+-                              })
++                              setTimeout(() => {
++                                patch(row, {
++                                  ...param,
++                                  schema: emptySchemaForType(value),
++                                })
++                              }, 10)
+                             }
+                           >
+                             <SelectTrigger className={`${CELL} text-[11px]`}>
+@@ -352,10 +356,12 @@
+                           <Select
+                             value={schema.format ?? ""}
+                             onValueChange={(value) =>
+-                              patch(row, {
+-                                ...param,
+-                                schema: { ...schema, format: value || undefined },
+-                              })
++                              setTimeout(() => {
++                                patch(row, {
++                                  ...param,
++                                  schema: { ...schema, format: value || undefined },
++                                })
++                              }, 10)
+                             }
+                             disabled={!PARAM_FORMATS[type]}
+                           >

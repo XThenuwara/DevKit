@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState, startTransition } from "react";
 import {
   Check,
   Download,
@@ -1005,16 +1005,18 @@ export const OpenApiTool: React.FC = () => {
   }, [fieldCatalog, pathCatalog, newPath]);
 
   const applySpec = (next: OpenAPIDoc, nextFormat = format, resetBaseline = false) => {
-    setSpec(next);
-    setFormat(nextFormat);
-    setError(null);
-    setSelected((prevSelected) => {
-      if (!prevSelected) return null;
-      const ops = listOperations(next);
-      const stillExists = ops.some((op) => op.path === prevSelected.path && op.method === prevSelected.method);
-      return stillExists ? prevSelected : (ops[0] ? { path: ops[0].path, method: ops[0].method } : null);
+    startTransition(() => {
+      setSpec(next);
+      setFormat(nextFormat);
+      setError(null);
+      setSelected((prevSelected) => {
+        if (!prevSelected) return null;
+        const ops = listOperations(next);
+        const stillExists = ops.some((op) => op.path === prevSelected.path && op.method === prevSelected.method);
+        return stillExists ? prevSelected : (ops[0] ? { path: ops[0].path, method: ops[0].method } : null);
+      });
+      if (resetBaseline) setBaselineSpec(cloneSpec(next));
     });
-    if (resetBaseline) setBaselineSpec(cloneSpec(next));
     
     // Defer the computationally heavy serialization and storage so the UI can update immediately
     setTimeout(() => {

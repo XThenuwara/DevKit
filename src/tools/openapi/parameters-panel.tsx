@@ -301,24 +301,26 @@ export const ParametersTable: React.FC<ParametersTableProps> = ({
                           <Select
                             value={param.in}
                             onValueChange={(value) => {
-                              const nextIn = value as ParameterObject["in"];
-                              if (nextIn === "path" && row.source === "operation") {
-                                const moved = { ...param, in: nextIn, required: true };
-                                onOpChange(opParams.filter((_, i) => i !== row.index));
-                                onPathChange([...pathParams, moved]);
-                                return;
-                              }
-                              if (nextIn !== "path" && row.source === "path") {
-                                const moved = { ...param, in: nextIn, required: false };
-                                onPathChange(pathParams.filter((_, i) => i !== row.index));
-                                onOpChange([...opParams, moved]);
-                                return;
-                              }
-                              patch(row, {
-                                ...param,
-                                in: nextIn,
-                                required: nextIn === "path" ? true : param.required,
-                              });
+                              setTimeout(() => {
+                                const nextIn = value as ParameterObject["in"];
+                                if (nextIn === "path" && row.source === "operation") {
+                                  const moved = { ...param, in: nextIn, required: true };
+                                  onOpChange(opParams.filter((_, i) => i !== row.index));
+                                  onPathChange([...pathParams, moved]);
+                                  return;
+                                }
+                                if (nextIn !== "path" && row.source === "path") {
+                                  const moved = { ...param, in: nextIn, required: false };
+                                  onPathChange(pathParams.filter((_, i) => i !== row.index));
+                                  onOpChange([...opParams, moved]);
+                                  return;
+                                }
+                                patch(row, {
+                                  ...param,
+                                  in: nextIn,
+                                  required: nextIn === "path" ? true : param.required,
+                                });
+                              }, 10);
                             }}
                           >
                             <SelectTrigger className={`h-7 text-[11px] font-semibold border-transparent ${IN_TONE[param.in]}`}>
@@ -335,10 +337,12 @@ export const ParametersTable: React.FC<ParametersTableProps> = ({
                           <Select
                             value={type}
                             onValueChange={(value) =>
-                              patch(row, {
-                                ...param,
-                                schema: emptySchemaForType(value),
-                              })
+                              setTimeout(() => {
+                                patch(row, {
+                                  ...param,
+                                  schema: emptySchemaForType(value),
+                                });
+                              }, 10)
                             }
                           >
                             <SelectTrigger className={`${CELL} text-[11px]`}>
@@ -355,10 +359,12 @@ export const ParametersTable: React.FC<ParametersTableProps> = ({
                           <Select
                             value={schema.format ?? ""}
                             onValueChange={(value) =>
-                              patch(row, {
-                                ...param,
-                                schema: { ...schema, format: value || undefined },
-                              })
+                              setTimeout(() => {
+                                patch(row, {
+                                  ...param,
+                                  schema: { ...schema, format: value || undefined },
+                                });
+                              }, 10)
                             }
                             disabled={!PARAM_FORMATS[type]}
                           >
@@ -376,7 +382,7 @@ export const ParametersTable: React.FC<ParametersTableProps> = ({
                           <label className="flex items-center justify-center">
                             <Checkbox
                               checked={Boolean(param.required) || param.in === "path"}
-                              onCheckedChange={(value) => patch(row, { ...param, required: value === true })}
+                              onCheckedChange={(value) => setTimeout(() => patch(row, { ...param, required: value === true }), 10)}
                               disabled={param.in === "path"}
                             />
                           </label>
@@ -416,11 +422,11 @@ export const ParametersTable: React.FC<ParametersTableProps> = ({
                         </div>
                       </ContextMenuTrigger>
                       <ContextMenuContent className="min-w-40">
-                        <ContextMenuItem disabled={param.in === "path"} onClick={() => patch(row, { ...param, required: !param.required })}>
+                        <ContextMenuItem disabled={param.in === "path"} onClick={() => setTimeout(() => patch(row, { ...param, required: !param.required }), 10)}>
                           {param.required || param.in === "path" ? "Mark optional" : "Mark required"}
                         </ContextMenuItem>
                         <ContextMenuSeparator />
-                        <ContextMenuItem variant="destructive" onClick={() => remove(row)}>
+                        <ContextMenuItem variant="destructive" onClick={() => setTimeout(() => remove(row), 10)}>
                           <Trash2 className="h-3.5 w-3.5" />
                           Delete parameter
                         </ContextMenuItem>
